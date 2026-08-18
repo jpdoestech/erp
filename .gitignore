@@ -3,3 +3,5 @@ db/erp.db
 db/erp.db-wal
 db/erp.db-shm
 .env
+.manual-setup-instructions.txt
+
