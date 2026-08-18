@@ -1,0 +1,31 @@
+<%- include('../partials/header', { title: 'Branches' }) %>
+
+<div class="page-header">
+  <div><span class="eyebrow">Structure</span><h4 class="mb-0">Branches</h4></div>
+  <a class="btn btn-primary btn-sm" href="/branches/new<%= selectedCompanyId ? '?company_id=' + selectedCompanyId : '' %>"><i class="bi bi-plus-lg"></i> New branch</a>
+</div>
+
+<%- include('../partials/company-picker', { basePath: '/branches' }) %>
+
+<div class="card">
+  <table class="table table-hover mb-0">
+    <thead><tr><th class="ps-3">Code</th><th>Name</th><th>Head Office</th><th>Created</th></tr></thead>
+    <tbody>
+      <% branches.forEach(function(b) { %>
+        <tr>
+          <td class="ps-3 fw-medium"><%= b.code %></td>
+          <td><%= b.name %></td>
+          <td class="text-muted"><%= b.head_office || '—' %></td>
+          <td class="text-muted"><%= b.created_at %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% if (!selectedCompanyId) { %>
+    <div class="empty-state"><i class="bi bi-diagram-3"></i>Select a company to view its branches.</div>
+  <% } else if (branches.length === 0) { %>
+    <div class="empty-state"><i class="bi bi-diagram-3"></i>No branches yet for this company.</div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

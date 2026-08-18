@@ -1,0 +1,46 @@
+<%- include('../partials/header', { title: 'New Client' }) %>
+
+<div class="page-header"><div><span class="eyebrow">Structure</span><h4 class="mb-0">New Client</h4></div></div>
+
+<div class="card p-4" style="max-width:480px;">
+  <% if (error) { %><div class="alert alert-danger py-2 small"><%= error %></div><% } %>
+  <form method="POST" action="/clients">
+    <% if (companies) { %>
+      <div class="mb-3">
+        <label class="form-label">Company</label>
+        <select name="company_id" class="form-select" required>
+          <option value="">— Select —</option>
+          <% companies.forEach(function(c) { %>
+            <option value="<%= c.id %>" <%= (selectedCompanyId && Number(selectedCompanyId) === c.id) ? 'selected' : '' %>><%= c.name %></option>
+          <% }); %>
+        </select>
+      </div>
+    <% } %>
+    <div class="mb-3">
+      <label class="form-label">Branch</label>
+      <select name="branch_id" class="form-select" required>
+        <option value="">— Select —</option>
+        <% branches.forEach(function(b) { %>
+          <option value="<%= b.id %>"><%= b.name %></option>
+        <% }); %>
+      </select>
+      <% if (branches.length === 0) { %>
+        <div class="hint">No branches found for this company yet — <a href="/branches/new<%= selectedCompanyId ? '?company_id=' + selectedCompanyId : '' %>">create one first</a>.</div>
+      <% } %>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Client Code</label>
+      <input type="text" name="code" class="form-control" value="<%= values.code || '' %>" required maxlength="20" />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Client Name</label>
+      <input type="text" name="name" class="form-control" value="<%= values.name || '' %>" required maxlength="120" />
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary btn-sm" type="submit">Create Client</button>
+      <a class="btn btn-outline-secondary btn-sm" href="/clients">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<%- include('../partials/footer') %>

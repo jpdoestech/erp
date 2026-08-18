@@ -1,0 +1,108 @@
+<%- include('../partials/header', { title: period.name }) %>
+
+<% var cls = { DRAFT: 'badge-pill--muted', FOR_REVIEW: 'badge-pill--gold', APPROVED: 'badge-pill--blue', FINALIZED: 'badge-pill--blue', POSTED: 'badge-pill--green' }[period.status]; %>
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Payroll</span>
+    <h4 class="mb-0"><%= period.name %> <span class="badge-pill <%= cls %>"><%= period.status.replace('_',' ') %></span></h4>
+  </div>
+</div>
+<p class="text-muted small mt-n2 mb-3">
+  Coverage: <%= period.period_start %> – <%= period.period_end %>
+  <% if (period.pay_date) { %> · Pay date: <%= period.pay_date %><% } %>
+</p>
+
+<div class="card mb-3">
+  <div class="p-3 pb-0">
+    <div class="eyebrow">Entries</div>
+    <% if (!canEdit) { %>
+      <p class="text-muted small">This period is <%= period.status.replace('_',' ') %> and can no longer be edited here. Corrections require an adjustment/reversal in a later phase.</p>
+    <% } %>
+  </div>
+  <table class="table table-hover mb-0">
+    <thead>
+      <tr>
+        <th class="ps-3">Employee No.</th><th>Name</th><th>Rate Type</th>
+        <th class="text-end">Rate</th><th class="text-end">Days Paid</th>
+        <th class="text-end">Basic Pay</th><th class="text-end">Gross</th><th class="text-end pe-3">Net</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% entries.forEach(function(e) { %>
+        <tr>
+          <td class="ps-3 figure text-muted"><%= e.employee_no %></td>
+          <td class="fw-medium"><%= e.last_name %>, <%= e.first_name %></td>
+          <td class="text-muted"><%= e.rate_type %></td>
+          <td class="text-end figure">₱<%= (e.rate_amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end">
+            <% if (canEdit) { %>
+              <form class="d-inline-flex gap-1 justify-content-end" method="POST" action="/payroll/<%= period.id %>/entries/<%= e.id %>">
+                <input class="form-control form-control-sm" style="width:80px;" type="number" step="0.5" min="0" name="days_paid" value="<%= e.days_paid %>" />
+                <button class="btn btn-outline-primary btn-sm" type="submit">Save</button>
+              </form>
+            <% } else { %>
+              <%= e.days_paid %>
+            <% } %>
+          </td>
+          <td class="text-end figure">₱<%= (e.basic_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end figure">₱<%= (e.gross_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end figure pe-3">₱<%= (e.net_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+    <% if (entries.length > 0) { %>
+      <tfoot>
+        <tr class="totals-row">
+          <td colspan="6" class="ps-3">Totals</td>
+          <td class="text-end figure">₱<%= (totals.gross / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end figure pe-3">₱<%= (totals.net / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+        </tr>
+      </tfoot>
+    <% } %>
+  </table>
+  <% if (entries.length === 0) { %>
+    <div class="empty-state"><i class="bi bi-people"></i>No employees in this period.</div>
+  <% } %>
+</div>
+
+<div class="card p-3">
+  <div class="eyebrow mb-1">Workflow</div>
+  <p class="text-muted small mb-3">DRAFT → FOR_REVIEW → APPROVED → FINALIZED → POSTED. Finalized periods are locked against normal edits.</p>
+  <div class="d-flex gap-2 flex-wrap">
+    <% if (period.status === 'DRAFT' && ['SUPER_ADMIN','COMPANY_ADMIN'].includes(currentUser.role)) { %>
+      <form method="POST" action="/payroll/<%= period.id %>/submit">
+        <button class="btn btn-primary btn-sm" type="submit">Submit for Review</button>
+      </form>
+    <% } else if (period.status === 'FOR_REVIEW' && ['SUPER_ADMIN','COMPANY_ADMIN','PAYROLL_APPROVER'].includes(currentUser.role)) { %>
+      <% if (currentUser.role !== 'SUPER_ADMIN' && period.submitted_by === currentUser.id) { %>
+        <p class="text-muted small mb-2">You submitted this period, so you can't approve it yourself (segregation of duties). Ask another approver to review it.</p>
+        <form method="POST" action="/payroll/<%= period.id %>/return">
+          <button class="btn btn-outline-secondary btn-sm" type="submit">Return to Draft</button>
+        </form>
+      <% } else { %>
+        <form method="POST" action="/payroll/<%= period.id %>/approve">
+          <button class="btn btn-sm" style="background:var(--success); color:#fff; border-color:var(--success);" type="submit">Approve</button>
+        </form>
+        <form method="POST" action="/payroll/<%= period.id %>/return">
+          <button class="btn btn-outline-secondary btn-sm" type="submit">Return to Draft</button>
+        </form>
+      <% } %>
+    <% } else if (period.status === 'APPROVED' && ['SUPER_ADMIN','COMPANY_ADMIN'].includes(currentUser.role)) { %>
+      <form method="POST" action="/payroll/<%= period.id %>/finalize">
+        <button class="btn btn-sm" style="background:var(--warning); color:#fff; border-color:var(--warning);" type="submit">Finalize (locks editing)</button>
+      </form>
+    <% } else if (period.status === 'FINALIZED' && ['SUPER_ADMIN','COMPANY_ADMIN'].includes(currentUser.role)) { %>
+      <form method="POST" action="/payroll/<%= period.id %>/post">
+        <button class="btn btn-sm" style="background:var(--success); color:#fff; border-color:var(--success);" type="submit">Post</button>
+      </form>
+    <% } else if (period.status === 'POSTED') { %>
+      <span class="text-muted small">This period is Posted — no further transitions.</span>
+    <% } else { %>
+      <span class="text-muted small">No workflow action available to you at this stage.</span>
+    <% } %>
+  </div>
+</div>
+
+<div class="mt-3"><a href="/payroll"><i class="bi bi-arrow-left"></i> Back to Payroll Periods</a></div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,47 @@
+<%- include('../partials/header', { title: 'Transfer Employee' }) %>
+
+<div class="page-header">
+  <div><span class="eyebrow">Workforce</span><h4 class="mb-0">Transfer Employee</h4></div>
+</div>
+<p class="text-muted small mt-n2 mb-3"><%= employee.last_name %>, <%= employee.first_name %> (<%= employee.employee_no %>)</p>
+
+<div class="card p-4" style="max-width:480px;">
+  <% if (currentDeployment) { %>
+    <p class="text-muted small">
+      Current assignment (since <%= currentDeployment.effective_start %>) will be closed
+      automatically as of the new effective date below.
+    </p>
+  <% } %>
+  <% if (error) { %><div class="alert alert-danger py-2 small"><%= error %></div><% } %>
+  <form method="POST" action="/employees/<%= employee.id %>/transfer">
+    <div class="mb-3">
+      <label class="form-label">New Branch</label>
+      <select name="branch_id" class="form-select" required>
+        <option value="">— Select —</option>
+        <% branches.forEach(function(b) { %>
+          <option value="<%= b.id %>" <%= currentDeployment && currentDeployment.branch_id === b.id ? 'selected' : '' %>><%= b.name %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">New Client (optional)</label>
+      <select name="client_id" class="form-select">
+        <option value="">— None —</option>
+        <% clients.forEach(function(c) { %>
+          <option value="<%= c.id %>" <%= currentDeployment && currentDeployment.client_id === c.id ? 'selected' : '' %>><%= c.name %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Effective Date</label>
+      <input type="date" name="effective_start" class="form-control" value="<%= values.effective_start || '' %>" required />
+      <div class="hint">Must not be earlier than the current assignment's start date.</div>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary btn-sm" type="submit">Confirm Transfer</button>
+      <a class="btn btn-outline-secondary btn-sm" href="/employees/<%= employee.id %>">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<%- include('../partials/footer') %>

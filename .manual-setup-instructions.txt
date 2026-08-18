@@ -1,0 +1,13 @@
+Microsoft Windows [Version 10.0.26200.9168]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Windows\System32>cd C:\erp-payroll
+
+C:\erp-payroll>npm -v
+11.13.0
+
+C:\erp-payroll>npm install
+
+
+npm run seed
+npm start

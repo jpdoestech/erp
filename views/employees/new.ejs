@@ -1,0 +1,78 @@
+<%- include('../partials/header', { title: 'New Employee' }) %>
+
+<div class="page-header"><div><span class="eyebrow">Workforce</span><h4 class="mb-0">New Employee</h4></div></div>
+
+<div class="card p-4" style="max-width:560px;">
+  <% if (error) { %><div class="alert alert-danger py-2 small"><%= error %></div><% } %>
+  <form method="POST" action="/employees">
+    <% if (companies) { %>
+      <div class="mb-3">
+        <label class="form-label">Company</label>
+        <select name="company_id" class="form-select" required>
+          <option value="">— Select —</option>
+          <% companies.forEach(function(c) { %>
+            <option value="<%= c.id %>" <%= (selectedCompanyId && Number(selectedCompanyId) === c.id) ? 'selected' : '' %>><%= c.name %></option>
+          <% }); %>
+        </select>
+      </div>
+    <% } %>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Employee No.</label>
+        <input type="text" name="employee_no" class="form-control" value="<%= values.employee_no || '' %>" required maxlength="30" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">First Name</label>
+        <input type="text" name="first_name" class="form-control" value="<%= values.first_name || '' %>" required maxlength="80" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Last Name</label>
+        <input type="text" name="last_name" class="form-control" value="<%= values.last_name || '' %>" required maxlength="80" />
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Rate Type</label>
+        <select name="rate_type" class="form-select" required>
+          <option value="DAILY" <%= values.rate_type === 'DAILY' ? 'selected' : '' %>>Daily</option>
+          <option value="MONTHLY" <%= values.rate_type === 'MONTHLY' ? 'selected' : '' %>>Monthly</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Rate Amount (₱)</label>
+        <input type="number" step="0.01" min="0" name="rate_amount" class="form-control" value="<%= values.rate_amount || '' %>" required />
+      </div>
+    </div>
+
+    <div class="row g-3 mb-1">
+      <div class="col-md-6">
+        <label class="form-label">Branch (deployment)</label>
+        <select name="branch_id" class="form-select" required>
+          <option value="">— Select —</option>
+          <% branches.forEach(function(b) { %>
+            <option value="<%= b.id %>"><%= b.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Client (deployment, optional)</label>
+        <select name="client_id" class="form-select">
+          <option value="">— None —</option>
+          <% clients.forEach(function(c) { %>
+            <option value="<%= c.id %>"><%= c.name %></option>
+          <% }); %>
+        </select>
+      </div>
+    </div>
+    <div class="hint mb-3">Deployment is effective-dated starting today. Transfers create a new record instead of overwriting history.</div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary btn-sm" type="submit">Create Employee</button>
+      <a class="btn btn-outline-secondary btn-sm" href="/employees">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<%- include('../partials/footer') %>

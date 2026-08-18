@@ -1,0 +1,44 @@
+<%- include('../partials/header', { title: 'Employees' }) %>
+
+<div class="page-header">
+  <div><span class="eyebrow">Workforce · Master data</span><h4 class="mb-0">Employee Masterlist</h4></div>
+  <% if (['SUPER_ADMIN','COMPANY_ADMIN'].includes(currentUser.role)) { %>
+    <a class="btn btn-primary btn-sm" href="/employees/new<%= selectedCompanyId ? '?company_id=' + selectedCompanyId : '' %>"><i class="bi bi-plus-lg"></i> New employee</a>
+  <% } %>
+</div>
+
+<%- include('../partials/company-picker', { basePath: '/employees' }) %>
+
+<div class="card">
+  <table class="table table-hover mb-0">
+    <thead>
+      <tr>
+        <th class="ps-3">Employee No.</th><th>Name</th><th>Branch</th><th>Client</th>
+        <th>Rate Type</th><th class="text-end">Rate</th><th>Status</th><th class="table-actions pe-3">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% employees.forEach(function(e) { %>
+        <tr>
+          <td class="ps-3 figure text-muted"><%= e.employee_no %></td>
+          <td class="fw-medium"><%= e.last_name %>, <%= e.first_name %></td>
+          <td class="text-muted"><%= e.branch_name || '—' %></td>
+          <td class="text-muted"><%= e.client_name || '—' %></td>
+          <td class="text-muted"><%= e.rate_type %></td>
+          <td class="text-end figure">₱<%= (e.rate_amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td><span class="badge-pill <%= e.status === 'ACTIVE' ? 'badge-pill--green' : 'badge-pill--muted' %>"><%= e.status %></span></td>
+          <td class="table-actions pe-3">
+            <span class="row-action-links"><a class="row-action-link" href="/employees/<%= e.id %>">View</a></span>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% if (!selectedCompanyId) { %>
+    <div class="empty-state"><i class="bi bi-people"></i>Select a company to view its employees.</div>
+  <% } else if (employees.length === 0) { %>
+    <div class="empty-state"><i class="bi bi-people"></i>No employees yet for this company.</div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

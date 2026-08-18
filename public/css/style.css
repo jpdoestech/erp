@@ -1,0 +1,213 @@
+/* ==========================================================================
+   Design tokens -- matched to the jpdoestech/accounting-system reference:
+   manager.io-style, plain dense utilitarian UI. Single sans-serif face,
+   muted blue accent, flat bordered panels (no shadows/rounded cards),
+   dense tables with text-link row actions instead of icon buttons.
+   ========================================================================== */
+:root {
+  --sidebar-bg: #eef1f4;
+  --sidebar-border: #d7dce1;
+  --sidebar-text: #2c3540;
+  --sidebar-text-muted: #6b7684;
+  --sidebar-active-bg: #dbe9f8;
+  --sidebar-active-text: #1a5da3;
+
+  --paper: #f4f5f7;
+  --surface: #ffffff;
+  --border: #d9dee3;
+  --border-light: #e8ebee;
+
+  --blue: #2569a8;
+  --blue-dark: #184c81;
+  --blue-tint: #eaf2fa;
+
+  --text: #212933;
+  --text-muted: #667080;
+
+  --danger: #b3382b;
+  --danger-tint: #f9e9e7;
+  --success: #2e7d4f;
+  --success-tint: #e6f3ea;
+  --warning: #a0680f;
+  --warning-tint: #faf1de;
+
+  --radius: 3px;
+
+  --font-body: "Segoe UI", "Helvetica Neue", Arial, -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --bs-body-font-family: var(--font-body);
+  --bs-body-color: var(--text);
+  --bs-body-bg: var(--paper);
+  --bs-primary: var(--blue);
+  --bs-primary-rgb: 37, 105, 168;
+  --bs-border-radius: var(--radius);
+  --bs-border-radius-sm: 2px;
+  --bs-link-color: var(--blue);
+  --bs-link-hover-color: var(--blue-dark);
+  --bs-font-size-base: 0.875rem;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--paper);
+  color: var(--text);
+  font-size: 0.875rem;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0;
+}
+h4 { font-size: 1.15rem; }
+
+a { text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.eyebrow {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.figure, .font-mono { font-family: var(--font-body); }
+
+/* ==========================================================================
+   App shell: light flat sidebar + plain topbar
+   ========================================================================== */
+.app-shell { display: flex; min-height: 100vh; }
+
+.app-sidebar {
+  width: 232px;
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.app-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 1rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--blue-dark);
+  border-bottom: 1px solid var(--sidebar-border);
+}
+.app-sidebar__brand .bi { color: var(--blue); font-size: 1.05rem; }
+
+.app-sidebar__section {
+  padding: 0.85rem 1rem 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sidebar-text-muted);
+}
+
+.app-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.38rem 1rem;
+  color: var(--sidebar-text);
+  text-decoration: none;
+  font-size: 0.85rem;
+  border-left: 3px solid transparent;
+}
+.app-sidebar__link .bi { width: 1rem; text-align: center; font-size: 0.85rem; color: var(--sidebar-text-muted); }
+.app-sidebar__link:hover { background: #e3e7ec; text-decoration: none; }
+.app-sidebar__link.is-active {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+  border-left-color: var(--blue);
+  font-weight: 600;
+}
+.app-sidebar__link.is-active .bi { color: var(--sidebar-active-text); }
+
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-main { flex: 1; min-width: 0; padding: 1.25rem 1.5rem 2.5rem; }
+
+/* ==========================================================================
+   Panels, tables, badges, forms -- flat, dense, bordered (no shadows)
+   ========================================================================== */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: none; }
+
+.table { --bs-table-bg: transparent; font-size: 0.83rem; margin-bottom: 0; }
+.table thead th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: #f6f7f9;
+  border-bottom: 1px solid var(--border);
+  padding: 0.45rem 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.table td { vertical-align: middle; border-color: var(--border-light); padding: 0.4rem 0.6rem; }
+.table-hover tbody tr:hover { background: var(--blue-tint); }
+.table-actions { white-space: nowrap; text-align: right; width: 1%; }
+
+.row-action-links { display: inline-flex; gap: 0.6rem; }
+.row-action-link { border: none; background: transparent; padding: 0; color: var(--blue); font-size: 0.8rem; font-weight: 500; }
+.row-action-link:hover { text-decoration: underline; color: var(--blue-dark); }
+.row-action-link--danger { color: var(--danger); }
+.row-action-link--danger:hover { color: #8a2b20; }
+
+.badge-pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.15rem 0.5rem; border-radius: 2px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+.badge-pill--green { background: var(--success-tint); color: var(--success); }
+.badge-pill--gold { background: var(--warning-tint); color: var(--warning); }
+.badge-pill--muted { background: #eef0f2; color: var(--text-muted); }
+.badge-pill--blue { background: var(--blue-tint); color: var(--blue-dark); }
+
+.btn { border-radius: var(--radius); font-weight: 500; font-size: 0.83rem; padding: 0.32rem 0.75rem; }
+.btn-primary { background: var(--blue); border-color: var(--blue); }
+.btn-primary:hover, .btn-primary:focus { background: var(--blue-dark); border-color: var(--blue-dark); }
+.btn-outline-primary { color: var(--blue); border-color: var(--blue); }
+.btn-outline-primary:hover { background: var(--blue); border-color: var(--blue); color: #fff; }
+.btn-outline-secondary { color: var(--text-muted); border-color: var(--border); }
+
+.form-control, .form-select {
+  border-color: var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 0.15rem rgba(37, 105, 168, 0.15);
+}
+.form-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem; }
+
+/* Page header row used across list views */
+.page-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.6rem; }
+
+.empty-state { padding: 2rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+.empty-state .bi { font-size: 1.4rem; color: var(--border); display: block; margin-bottom: 0.4rem; }
+
+.hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; }
+.totals-row td { font-weight: 700; border-top: 2px solid var(--text); }

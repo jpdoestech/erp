@@ -1,0 +1,59 @@
+<%- include('partials/header', { title: 'Dashboard' }) %>
+
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Overview</span>
+    <h4 class="mb-0">Dashboard</h4>
+  </div>
+</div>
+<p class="text-muted small mt-n2 mb-3">Welcome back, <%= currentUser.full_name %>.</p>
+
+<div class="row row-cols-2 row-cols-md-5 g-3">
+  <div class="col">
+    <div class="card text-center p-3">
+      <div class="text-muted small">Companies</div>
+      <div class="fs-4 fw-semibold mt-1"><%= stats.companies %></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card text-center p-3">
+      <div class="text-muted small">Branches</div>
+      <div class="fs-4 fw-semibold mt-1"><%= stats.branches %></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card text-center p-3">
+      <div class="text-muted small">Clients</div>
+      <div class="fs-4 fw-semibold mt-1"><%= stats.clients %></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card text-center p-3">
+      <div class="text-muted small">Active Employees</div>
+      <div class="fs-4 fw-semibold mt-1"><%= stats.employees %></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card text-center p-3">
+      <div class="text-muted small">Open Payroll Periods</div>
+      <div class="fs-4 fw-semibold mt-1"><%= stats.openPayrolls %></div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-4 p-3">
+  <div class="eyebrow mb-2">Quick links</div>
+  <div class="d-flex gap-2 flex-wrap">
+    <% if (currentUser.role === 'SUPER_ADMIN') { %>
+      <a class="btn btn-outline-primary btn-sm" href="/companies/new"><i class="bi bi-plus-lg"></i> New Company</a>
+    <% } %>
+    <% if (['SUPER_ADMIN','COMPANY_ADMIN'].includes(currentUser.role)) { %>
+      <a class="btn btn-outline-primary btn-sm" href="/branches/new"><i class="bi bi-plus-lg"></i> New Branch</a>
+      <a class="btn btn-outline-primary btn-sm" href="/clients/new"><i class="bi bi-plus-lg"></i> New Client</a>
+      <a class="btn btn-outline-primary btn-sm" href="/employees/new"><i class="bi bi-plus-lg"></i> New Employee</a>
+      <a class="btn btn-primary btn-sm" href="/payroll/new"><i class="bi bi-plus-lg"></i> New Payroll Period</a>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

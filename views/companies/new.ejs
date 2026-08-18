@@ -1,0 +1,25 @@
+<%- include('../partials/header', { title: 'New Company' }) %>
+
+<div class="page-header">
+  <div><span class="eyebrow">Structure</span><h4 class="mb-0">New Company</h4></div>
+</div>
+
+<div class="card p-4" style="max-width:480px;">
+  <% if (error) { %><div class="alert alert-danger py-2 small"><%= error %></div><% } %>
+  <form method="POST" action="/companies">
+    <div class="mb-3">
+      <label class="form-label">Company Code</label>
+      <input type="text" name="code" class="form-control" value="<%= values.code || '' %>" required maxlength="20" />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Company Name</label>
+      <input type="text" name="name" class="form-control" value="<%= values.name || '' %>" required maxlength="120" />
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary btn-sm" type="submit">Create Company</button>
+      <a class="btn btn-outline-secondary btn-sm" href="/companies">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<%- include('../partials/footer') %>

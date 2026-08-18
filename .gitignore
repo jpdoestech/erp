@@ -1,0 +1,5 @@
+node_modules/
+db/erp.db
+db/erp.db-wal
+db/erp.db-shm
+.env

@@ -1,0 +1,39 @@
+<%- include('../partials/header', { title: 'Payroll' }) %>
+
+<div class="page-header">
+  <div><span class="eyebrow">Payroll</span><h4 class="mb-0">Payroll Periods</h4></div>
+  <% if (['SUPER_ADMIN','COMPANY_ADMIN'].includes(currentUser.role)) { %>
+    <a class="btn btn-primary btn-sm" href="/payroll/new<%= selectedCompanyId ? '?company_id=' + selectedCompanyId : '' %>"><i class="bi bi-plus-lg"></i> New payroll period</a>
+  <% } %>
+</div>
+
+<%- include('../partials/company-picker', { basePath: '/payroll' }) %>
+
+<div class="card">
+  <table class="table table-hover mb-0">
+    <thead><tr><th class="ps-3">Name</th><th>Coverage</th><th>Pay Date</th><th>Status</th><th class="table-actions pe-3">Actions</th></tr></thead>
+    <tbody>
+      <% periods.forEach(function(p) { %>
+        <tr>
+          <td class="ps-3 fw-medium"><%= p.name %></td>
+          <td class="text-muted"><%= p.period_start %> – <%= p.period_end %></td>
+          <td class="text-muted"><%= p.pay_date || '—' %></td>
+          <td>
+            <% var cls = { DRAFT: 'badge-pill--muted', FOR_REVIEW: 'badge-pill--gold', APPROVED: 'badge-pill--blue', FINALIZED: 'badge-pill--blue', POSTED: 'badge-pill--green' }[p.status]; %>
+            <span class="badge-pill <%= cls %>"><%= p.status.replace('_',' ') %></span>
+          </td>
+          <td class="table-actions pe-3">
+            <span class="row-action-links"><a class="row-action-link" href="/payroll/<%= p.id %>">Open</a></span>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% if (!selectedCompanyId) { %>
+    <div class="empty-state"><i class="bi bi-cash-stack"></i>Select a company to view its payroll periods.</div>
+  <% } else if (periods.length === 0) { %>
+    <div class="empty-state"><i class="bi bi-cash-stack"></i>No payroll periods yet for this company.</div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

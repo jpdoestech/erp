@@ -1,0 +1,29 @@
+<%- include('../partials/header', { title: 'Companies' }) %>
+
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Structure</span>
+    <h4 class="mb-0">Companies</h4>
+  </div>
+  <a class="btn btn-primary btn-sm" href="/companies/new"><i class="bi bi-plus-lg"></i> New company</a>
+</div>
+
+<div class="card">
+  <table class="table table-hover mb-0">
+    <thead><tr><th class="ps-3">Code</th><th>Name</th><th>Created</th></tr></thead>
+    <tbody>
+      <% companies.forEach(function(c) { %>
+        <tr>
+          <td class="ps-3 fw-medium"><%= c.code %></td>
+          <td><%= c.name %></td>
+          <td class="text-muted"><%= c.created_at %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% if (companies.length === 0) { %>
+    <div class="empty-state"><i class="bi bi-building"></i>No companies yet. Add your first one to get started.</div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

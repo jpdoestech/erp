@@ -1,0 +1,12 @@
+<%- include('partials/header', { title: 'Error' }) %>
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Notice</span>
+    <h4 class="mb-0">Something needs your attention</h4>
+  </div>
+</div>
+<div class="card p-3">
+  <p class="mb-3"><%= message %></p>
+  <a class="btn btn-outline-secondary btn-sm" href="/"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+</div>
+<%- include('partials/footer') %>

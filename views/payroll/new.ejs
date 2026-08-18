@@ -1,0 +1,45 @@
+<%- include('../partials/header', { title: 'New Payroll Period' }) %>
+
+<div class="page-header"><div><span class="eyebrow">Payroll</span><h4 class="mb-0">New Payroll Period</h4></div></div>
+
+<div class="card p-4" style="max-width:480px;">
+  <% if (error) { %><div class="alert alert-danger py-2 small"><%= error %></div><% } %>
+  <form method="POST" action="/payroll">
+    <% if (companies) { %>
+      <div class="mb-3">
+        <label class="form-label">Company</label>
+        <select name="company_id" class="form-select" required>
+          <option value="">— Select —</option>
+          <% companies.forEach(function(c) { %>
+            <option value="<%= c.id %>" <%= (selectedCompanyId && Number(selectedCompanyId) === c.id) ? 'selected' : '' %>><%= c.name %></option>
+          <% }); %>
+        </select>
+      </div>
+    <% } %>
+    <div class="mb-3">
+      <label class="form-label">Period Name</label>
+      <input type="text" name="name" class="form-control" value="<%= values.name || '' %>" placeholder="e.g. August 1-15, 2026" required maxlength="80" />
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Period Start</label>
+        <input type="date" name="period_start" class="form-control" value="<%= values.period_start || '' %>" required />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Period End</label>
+        <input type="date" name="period_end" class="form-control" value="<%= values.period_end || '' %>" required />
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Pay Date (optional)</label>
+      <input type="date" name="pay_date" class="form-control" value="<%= values.pay_date || '' %>" />
+    </div>
+    <div class="hint mb-3">All active employees of the selected company will be added automatically as draft entries with 0 days paid.</div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary btn-sm" type="submit">Create Period</button>
+      <a class="btn btn-outline-secondary btn-sm" href="/payroll">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<%- include('../partials/footer') %>

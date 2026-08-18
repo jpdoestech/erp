@@ -1,0 +1,15 @@
+<% if (companies) { %>
+  <form method="GET" action="<%= basePath %>" class="mb-3">
+    <div class="mb-0" style="max-width:320px;">
+      <label class="form-label mb-1">Company</label>
+      <select name="company_id" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">— Select a company —</option>
+        <% companies.forEach(function(c) { %>
+          <option value="<%= c.id %>" <%= (selectedCompanyId && Number(selectedCompanyId) === c.id) ? 'selected' : '' %>>
+            <%= c.name %> (<%= c.code %>)
+          </option>
+        <% }); %>
+      </select>
+    </div>
+  </form>
+<% } %>

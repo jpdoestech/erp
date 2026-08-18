@@ -1,0 +1,56 @@
+<%- include('../partials/header', { title: employee.last_name + ', ' + employee.first_name }) %>
+
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Workforce</span>
+    <h4 class="mb-0"><%= employee.last_name %>, <%= employee.first_name %> <span class="text-muted fw-normal">(<%= employee.employee_no %>)</span></h4>
+  </div>
+</div>
+<p class="text-muted small mt-n2 mb-3">
+  <%= employee.rate_type %> · ₱<%= (employee.rate_amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %>
+  · <span class="badge-pill <%= employee.status === 'ACTIVE' ? 'badge-pill--green' : 'badge-pill--muted' %>"><%= employee.status %></span>
+</p>
+
+<div class="card p-3 mb-3">
+  <div class="eyebrow mb-2">Current Assignment</div>
+  <% var current = deployments.find(function(d){ return d.is_current === 1; }); %>
+  <% if (current) { %>
+    <p class="mb-3">
+      <strong>Branch:</strong> <%= current.branch_name %><br />
+      <strong>Client:</strong> <%= current.client_name || '—' %><br />
+      <strong>Effective since:</strong> <%= current.effective_start %>
+    </p>
+  <% } else { %>
+    <p class="text-muted mb-3">No current deployment on record.</p>
+  <% } %>
+  <% if (['SUPER_ADMIN','COMPANY_ADMIN'].includes(currentUser.role)) { %>
+    <div>
+      <a class="btn btn-primary btn-sm" href="/employees/<%= employee.id %>/transfer"><i class="bi bi-arrow-left-right"></i> Transfer Employee</a>
+    </div>
+  <% } %>
+</div>
+
+<div class="card">
+  <div class="p-3 pb-0">
+    <div class="eyebrow">Assignment History</div>
+    <p class="text-muted small">A transfer never overwrites history — it closes the old assignment and opens a new one.</p>
+  </div>
+  <table class="table table-hover mb-0">
+    <thead><tr><th class="ps-3">Branch</th><th>Client</th><th>Effective Start</th><th>Effective End</th><th>Status</th></tr></thead>
+    <tbody>
+      <% deployments.forEach(function(d) { %>
+        <tr>
+          <td class="ps-3 fw-medium"><%= d.branch_name %></td>
+          <td class="text-muted"><%= d.client_name || '—' %></td>
+          <td class="text-muted"><%= d.effective_start %></td>
+          <td class="text-muted"><%= d.effective_end || '—' %></td>
+          <td><span class="badge-pill <%= d.is_current ? 'badge-pill--blue' : 'badge-pill--muted' %>"><%= d.is_current ? 'Current' : 'Closed' %></span></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<div class="mt-3"><a href="/employees"><i class="bi bi-arrow-left"></i> Back to Employee Masterlist</a></div>
+
+<%- include('../partials/footer') %>
