@@ -1,0 +1,64 @@
+<%- include('../partials/header', { title: loanTypes[loan.loan_type] }) %>
+
+<% var cls = { ACTIVE: 'badge-pill--blue', COMPLETED: 'badge-pill--green', CANCELLED: 'badge-pill--muted' }[loan.status]; %>
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Workforce · Loans</span>
+    <h4 class="mb-0"><%= loanTypes[loan.loan_type] %> <span class="badge-pill <%= cls %>"><%= loan.status %></span></h4>
+  </div>
+</div>
+<p class="text-muted small mt-n2 mb-3">
+  <a href="/employees/<%= employee.id %>"><%= employee.last_name %>, <%= employee.first_name %></a>
+  (<%= employee.employee_no %>) <% if (loan.description) { %> · <%= loan.description %><% } %>
+</p>
+
+<div class="row g-3 mb-3">
+  <div class="col-4">
+    <div class="card text-center p-3">
+      <div class="text-muted small">Principal</div>
+      <div class="fs-5 fw-semibold mt-1">₱<%= (loan.principal_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card text-center p-3">
+      <div class="text-muted small">Remaining Balance</div>
+      <div class="fs-5 fw-semibold mt-1">₱<%= (loan.balance_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card text-center p-3">
+      <div class="text-muted small">Suggested Installment</div>
+      <div class="fs-5 fw-semibold mt-1">₱<%= (loan.installment_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="p-3 pb-0"><div class="eyebrow">Deduction History</div></div>
+  <table class="table table-hover mb-0">
+    <thead><tr><th class="ps-3">Payroll Period</th><th>Coverage</th><th>Period Status</th><th class="text-end pe-3">Amount Deducted</th></tr></thead>
+    <tbody>
+      <% deductions.forEach(function(d) { %>
+        <tr>
+          <td class="ps-3 fw-medium"><%= d.period_name %></td>
+          <td class="text-muted"><%= d.period_start %> – <%= d.period_end %></td>
+          <td class="text-muted"><%= d.period_status.replace('_',' ') %></td>
+          <td class="text-end figure pe-3">₱<%= (d.amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% if (deductions.length === 0) { %>
+    <div class="empty-state"><i class="bi bi-cash-stack"></i>No deductions applied yet.</div>
+  <% } %>
+</div>
+
+<% if (loan.status === 'ACTIVE' && loan.balance_cents === loan.principal_cents && ['SUPER_ADMIN','COMPANY_ADMIN'].includes(currentUser.role)) { %>
+  <form method="POST" action="/loans/<%= loan.id %>/cancel" onsubmit="return confirm('Cancel this loan? This cannot be undone.')">
+    <button class="btn btn-outline-secondary btn-sm" type="submit">Cancel Loan</button>
+  </form>
+<% } %>
+
+<div class="mt-3"><a href="/loans"><i class="bi bi-arrow-left"></i> Back to Loans &amp; Advances</a></div>
+
+<%- include('../partials/footer') %>

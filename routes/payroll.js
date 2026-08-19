@@ -3,8 +3,10 @@ const router = express.Router();
 const db = require('../db/database');
 const { requireLogin, requireRole, getScopedCompanyId, assertCompanyScope } = require('../middleware/auth');
 const { logAction } = require('../db/audit');
-const { computeEntry, computeLineAmount, PAY_TYPES } = require('../utils/payroll-calc');
+const { computeEntry, computeLineAmount, PAY_TYPES, buildDayRows, DAY_ROW_ORDER } = require('../utils/payroll-calc');
 const { computeStatutoryDeductions } = require('../utils/gov-deductions');
+const { LOAN_TYPES } = require('../utils/loan-types');
+const { pesosToCents } = require('../utils/money');
 
 router.use(requireLogin);
 
@@ -19,23 +21,30 @@ function recomputeEntryTotals(entryId) {
   const premium = db
     .prepare('SELECT COALESCE(SUM(amount_cents), 0) AS total FROM payroll_entry_lines WHERE payroll_entry_id = ?')
     .get(entryId).total;
-  const gross = entry.basic_pay_cents + premium;
+  const adjustments = db
+    .prepare('SELECT COALESCE(SUM(amount_cents), 0) AS total FROM payroll_entry_adjustments WHERE payroll_entry_id = ?')
+    .get(entryId).total;
+  const gross = entry.basic_pay_cents + premium + adjustments;
 
   const ded = computeStatutoryDeductions({ periodGrossCents: gross, payFrequency: period.pay_frequency });
+  const loanDeduction = db
+    .prepare('SELECT COALESCE(SUM(amount_cents), 0) AS total FROM payroll_loan_deductions WHERE payroll_entry_id = ?')
+    .get(entryId).total;
   const totalDeductions =
-    ded.sssEmployeeCents + ded.philhealthEmployeeCents + ded.pagibigEmployeeCents + ded.withholdingTaxCents;
+    ded.sssEmployeeCents + ded.philhealthEmployeeCents + ded.pagibigEmployeeCents + ded.withholdingTaxCents + loanDeduction;
   const net = gross - totalDeductions;
 
   db.prepare(
     `UPDATE payroll_entries SET
-       premium_pay_cents = ?, gross_pay_cents = ?,
+       premium_pay_cents = ?, adjustments_cents = ?, gross_pay_cents = ?,
        sss_employee_cents = ?, sss_employer_cents = ?,
        philhealth_employee_cents = ?, philhealth_employer_cents = ?,
        pagibig_employee_cents = ?, pagibig_employer_cents = ?,
-       withholding_tax_cents = ?, total_deductions_cents = ?, net_pay_cents = ?
+       withholding_tax_cents = ?, loan_deduction_cents = ?, total_deductions_cents = ?, net_pay_cents = ?
      WHERE id = ?`
   ).run(
     premium,
+    adjustments,
     gross,
     ded.sssEmployeeCents,
     ded.sssEmployerCents,
@@ -44,6 +53,7 @@ function recomputeEntryTotals(entryId) {
     ded.pagibigEmployeeCents,
     ded.pagibigEmployerCents,
     ded.withholdingTaxCents,
+    loanDeduction,
     totalDeductions,
     net,
     entryId
@@ -157,7 +167,58 @@ router.get('/:id', (req, res) => {
   res.render('payroll/view', { period, entries, totals, canEdit: period.status === 'DRAFT' });
 });
 
-// ---- Single entry detail: regular days + premium pay-type lines (OT/ND/holiday/rest day) ----
+// Builds the full set of locals payroll/entry.ejs needs. Shared by the GET
+// route and every mutation route's error-path re-render so they can't drift.
+function buildEntryViewData(period, entry, error) {
+  const entryWithEmp = db
+    .prepare(
+      `SELECT pe.*, e.employee_no, e.first_name, e.last_name, e.status AS employee_status,
+              b.name AS branch_name, c.name AS client_name
+       FROM payroll_entries pe
+       JOIN employees e ON e.id = pe.employee_id
+       LEFT JOIN employee_deployments d ON d.employee_id = e.id AND d.is_current = 1
+       LEFT JOIN branches b ON b.id = d.branch_id
+       LEFT JOIN clients c ON c.id = d.client_id
+       WHERE pe.id = ?`
+    )
+    .get(entry.id);
+  const lines = db
+    .prepare('SELECT * FROM payroll_entry_lines WHERE payroll_entry_id = ? ORDER BY id')
+    .all(entry.id);
+  const loanDeductions = db
+    .prepare(
+      `SELECT d.*, l.loan_type, l.description AS loan_description
+       FROM payroll_loan_deductions d JOIN employee_loans l ON l.id = d.loan_id
+       WHERE d.payroll_entry_id = ? ORDER BY d.id`
+    )
+    .all(entry.id);
+  const adjustments = db
+    .prepare('SELECT * FROM payroll_entry_adjustments WHERE payroll_entry_id = ? ORDER BY id')
+    .all(entry.id);
+  const availableLoans = db
+    .prepare(
+      `SELECT * FROM employee_loans
+       WHERE employee_id = ? AND status = 'ACTIVE' AND balance_cents > 0
+       ORDER BY created_at`
+    )
+    .all(entryWithEmp.employee_id);
+
+  return {
+    period,
+    entry: entryWithEmp,
+    lines,
+    payTypes: PAY_TYPES,
+    dayRows: buildDayRows(entryWithEmp, lines),
+    loanDeductions,
+    adjustments,
+    availableLoans,
+    loanTypes: LOAN_TYPES,
+    canEdit: period.status === 'DRAFT',
+    error,
+  };
+}
+
+// ---- Single entry detail: regular days + premium pay-type lines + loan deductions ----
 router.get('/:id/entries/:entryId', (req, res) => {
   const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
   if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
@@ -165,27 +226,13 @@ router.get('/:id/entries/:entryId', (req, res) => {
     return res.status(403).render('error', { message: 'You do not have access to this payroll period.' });
   }
   const entry = db
-    .prepare(
-      `SELECT pe.*, e.employee_no, e.first_name, e.last_name
-       FROM payroll_entries pe JOIN employees e ON e.id = pe.employee_id
-       WHERE pe.id = ? AND pe.payroll_period_id = ?`
-    )
+    .prepare('SELECT * FROM payroll_entries WHERE id = ? AND payroll_period_id = ?')
     .get(req.params.entryId, period.id);
   if (!entry) return res.status(404).render('error', { message: 'Payroll entry not found.' });
 
-  const lines = db
-    .prepare('SELECT * FROM payroll_entry_lines WHERE payroll_entry_id = ? ORDER BY id')
-    .all(entry.id);
-
-  res.render('payroll/entry', {
-    period,
-    entry,
-    lines,
-    payTypes: PAY_TYPES,
-    canEdit: period.status === 'DRAFT',
-    error: null,
-  });
+  res.render('payroll/entry', buildEntryViewData(period, entry, null));
 });
+
 
 // ---- Update one entry's Regular days paid (DRAFT only) ----
 router.post('/:id/entries/:entryId', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
@@ -229,7 +276,84 @@ router.post('/:id/entries/:entryId', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN')
   res.redirect(`/payroll/${period.id}/entries/${entry.id}`);
 });
 
-// ---- Add a premium pay-type line (OT / ND / Rest Day / Special Holiday / Regular Holiday) ----
+// ---- Save one "day type" spreadsheet row: Days / OT hours / ND hours in a single
+// submit. Upserts up to 3 underlying records (Regular uses the parent entry's own
+// days_paid/basic_pay_cents; every other day type + its OT/ND variant are lines).
+router.post('/:id/entries/:entryId/day-row', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
+  const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
+  if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
+  if (!assertCompanyScope(req, period.company_id)) {
+    return res.status(403).render('error', { message: 'You do not have access to this payroll period.' });
+  }
+  const entry = db
+    .prepare('SELECT * FROM payroll_entries WHERE id = ? AND payroll_period_id = ?')
+    .get(req.params.entryId, period.id);
+  if (!entry) return res.status(404).render('error', { message: 'Payroll entry not found.' });
+
+  const renderWithError = (error) => res.status(400).render('payroll/entry', buildEntryViewData(period, entry, error));
+
+  if (period.status !== 'DRAFT') {
+    return res.status(409).render('error', {
+      message: 'This payroll period is no longer in Draft and cannot be edited. Use an adjustment for corrections.',
+    });
+  }
+
+  const { day_type, days, ot_hours, nd_hours } = req.body;
+  if (!DAY_ROW_ORDER.includes(day_type)) {
+    return renderWithError('Unknown day type row.');
+  }
+
+  const upsertLine = (payType, qty) => {
+    db.prepare('DELETE FROM payroll_entry_lines WHERE payroll_entry_id = ? AND pay_type = ?').run(entry.id, payType);
+    const q = Math.max(0, Number(qty) || 0);
+    if (q > 0) {
+      const amountCents = computeLineAmount({
+        payType,
+        quantity: q,
+        rateType: entry.rate_type,
+        rateAmountCents: entry.rate_amount_cents,
+      });
+      db.prepare(
+        'INSERT INTO payroll_entry_lines (payroll_entry_id, pay_type, quantity, amount_cents) VALUES (?, ?, ?, ?)'
+      ).run(entry.id, payType, q, amountCents);
+    }
+  };
+
+  const saveTxn = db.transaction(() => {
+    if (day_type === 'REGULAR') {
+      const daysQty = Math.max(0, Number(days) || 0);
+      const { basicPayCents } = computeEntry({
+        rateType: entry.rate_type,
+        rateAmountCents: entry.rate_amount_cents,
+        daysPaid: daysQty,
+      });
+      db.prepare('UPDATE payroll_entries SET days_paid = ?, basic_pay_cents = ? WHERE id = ?').run(
+        daysQty,
+        basicPayCents,
+        entry.id
+      );
+      upsertLine('OT', ot_hours);
+      upsertLine('ND', nd_hours);
+    } else {
+      upsertLine(day_type, days);
+      upsertLine(`OT_${day_type}`, ot_hours);
+      upsertLine(`ND_${day_type}`, nd_hours);
+    }
+  });
+  saveTxn();
+  recomputeEntryTotals(entry.id);
+
+  logAction(
+    req.session.user.id,
+    'UPDATE',
+    'payroll_entry',
+    entry.id,
+    `Saved ${day_type} row (days=${days || 0}, OT=${ot_hours || 0}, ND=${nd_hours || 0}) for employee ${entry.employee_id} in period ${period.id}`
+  );
+  res.redirect(`/payroll/${period.id}/entries/${entry.id}`);
+});
+
+
 router.post('/:id/entries/:entryId/lines', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
   const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
   if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
@@ -241,25 +365,7 @@ router.post('/:id/entries/:entryId/lines', requireRole('SUPER_ADMIN', 'COMPANY_A
     .get(req.params.entryId, period.id);
   if (!entry) return res.status(404).render('error', { message: 'Payroll entry not found.' });
 
-  const renderWithError = (error) => {
-    const lines = db
-      .prepare('SELECT * FROM payroll_entry_lines WHERE payroll_entry_id = ? ORDER BY id')
-      .all(entry.id);
-    const entryWithEmp = db
-      .prepare(
-        `SELECT pe.*, e.employee_no, e.first_name, e.last_name
-         FROM payroll_entries pe JOIN employees e ON e.id = pe.employee_id WHERE pe.id = ?`
-      )
-      .get(entry.id);
-    return res.status(400).render('payroll/entry', {
-      period,
-      entry: entryWithEmp,
-      lines,
-      payTypes: PAY_TYPES,
-      canEdit: period.status === 'DRAFT',
-      error,
-    });
-  };
+  const renderWithError = (error) => res.status(400).render('payroll/entry', buildEntryViewData(period, entry, error));
 
   if (period.status !== 'DRAFT') {
     return res.status(409).render('error', {
@@ -332,6 +438,201 @@ router.post(
       'payroll_entry_line',
       entry.id,
       `Removed ${line.pay_type} line (qty=${line.quantity}) for employee ${entry.employee_id} in period ${period.id}`
+    );
+    res.redirect(`/payroll/${period.id}/entries/${entry.id}`);
+  }
+);
+
+// ---- Apply a loan/cash-advance deduction to this entry ----
+router.post('/:id/entries/:entryId/loan-deductions', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
+  const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
+  if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
+  if (!assertCompanyScope(req, period.company_id)) {
+    return res.status(403).render('error', { message: 'You do not have access to this payroll period.' });
+  }
+  const entry = db
+    .prepare('SELECT * FROM payroll_entries WHERE id = ? AND payroll_period_id = ?')
+    .get(req.params.entryId, period.id);
+  if (!entry) return res.status(404).render('error', { message: 'Payroll entry not found.' });
+
+  const renderWithError = (error) => res.status(400).render('payroll/entry', buildEntryViewData(period, entry, error));
+
+  if (period.status !== 'DRAFT') {
+    return res.status(409).render('error', {
+      message: 'This payroll period is no longer in Draft and cannot be edited. Use an adjustment for corrections.',
+    });
+  }
+
+  const { loan_id, amount } = req.body;
+  const loan = loan_id
+    ? db
+        .prepare("SELECT * FROM employee_loans WHERE id = ? AND employee_id = ? AND status = 'ACTIVE'")
+        .get(loan_id, entry.employee_id)
+    : null;
+  if (!loan) {
+    return renderWithError('Select a valid, active loan belonging to this employee.');
+  }
+  const amountCents = pesosToCents(amount);
+  if (!amountCents || amountCents <= 0) {
+    return renderWithError('Enter a deduction amount greater than zero.');
+  }
+  if (amountCents > loan.balance_cents) {
+    return renderWithError(
+      `Deduction (₱${(amountCents / 100).toFixed(2)}) cannot exceed the loan's remaining balance (₱${(loan.balance_cents / 100).toFixed(2)}).`
+    );
+  }
+
+  const applyTxn = db.transaction(() => {
+    db.prepare(
+      'INSERT INTO payroll_loan_deductions (payroll_entry_id, loan_id, amount_cents) VALUES (?, ?, ?)'
+    ).run(entry.id, loan.id, amountCents);
+    const newBalance = loan.balance_cents - amountCents;
+    db.prepare('UPDATE employee_loans SET balance_cents = ?, status = ? WHERE id = ?').run(
+      newBalance,
+      newBalance === 0 ? 'COMPLETED' : 'ACTIVE',
+      loan.id
+    );
+  });
+  applyTxn();
+  recomputeEntryTotals(entry.id);
+
+  logAction(
+    req.session.user.id,
+    'CREATE',
+    'payroll_loan_deduction',
+    entry.id,
+    `Applied ₱${(amountCents / 100).toFixed(2)} loan deduction (loan ${loan.id}) for employee ${entry.employee_id} in period ${period.id}`
+  );
+  res.redirect(`/payroll/${period.id}/entries/${entry.id}`);
+});
+
+// ---- Remove a loan deduction (restores the amount to the loan's balance) ----
+router.post(
+  '/:id/entries/:entryId/loan-deductions/:deductionId/delete',
+  requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'),
+  (req, res) => {
+    const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
+    if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
+    if (!assertCompanyScope(req, period.company_id)) {
+      return res.status(403).render('error', { message: 'You do not have access to this payroll period.' });
+    }
+    if (period.status !== 'DRAFT') {
+      return res.status(409).render('error', {
+        message: 'This payroll period is no longer in Draft and cannot be edited. Use an adjustment for corrections.',
+      });
+    }
+    const entry = db
+      .prepare('SELECT * FROM payroll_entries WHERE id = ? AND payroll_period_id = ?')
+      .get(req.params.entryId, period.id);
+    if (!entry) return res.status(404).render('error', { message: 'Payroll entry not found.' });
+
+    const deduction = db
+      .prepare('SELECT * FROM payroll_loan_deductions WHERE id = ? AND payroll_entry_id = ?')
+      .get(req.params.deductionId, entry.id);
+    if (!deduction) return res.status(404).render('error', { message: 'Loan deduction not found.' });
+
+    const removeTxn = db.transaction(() => {
+      db.prepare('DELETE FROM payroll_loan_deductions WHERE id = ?').run(deduction.id);
+      const loan = db.prepare('SELECT * FROM employee_loans WHERE id = ?').get(deduction.loan_id);
+      const restoredBalance = Math.min(loan.principal_cents, loan.balance_cents + deduction.amount_cents);
+      db.prepare('UPDATE employee_loans SET balance_cents = ?, status = ? WHERE id = ?').run(
+        restoredBalance,
+        'ACTIVE',
+        loan.id
+      );
+    });
+    removeTxn();
+    recomputeEntryTotals(entry.id);
+
+    logAction(
+      req.session.user.id,
+      'DELETE',
+      'payroll_loan_deduction',
+      entry.id,
+      `Removed ₱${(deduction.amount_cents / 100).toFixed(2)} loan deduction (loan ${deduction.loan_id}) for employee ${entry.employee_id} in period ${period.id}`
+    );
+    res.redirect(`/payroll/${period.id}/entries/${entry.id}`);
+  }
+);
+
+// ---- Add an "Other Income / Adjustment" line (allowances, reimbursements, one-off bonuses) ----
+router.post('/:id/entries/:entryId/adjustments', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
+  const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
+  if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
+  if (!assertCompanyScope(req, period.company_id)) {
+    return res.status(403).render('error', { message: 'You do not have access to this payroll period.' });
+  }
+  const entry = db
+    .prepare('SELECT * FROM payroll_entries WHERE id = ? AND payroll_period_id = ?')
+    .get(req.params.entryId, period.id);
+  if (!entry) return res.status(404).render('error', { message: 'Payroll entry not found.' });
+
+  const renderWithError = (error) => res.status(400).render('payroll/entry', buildEntryViewData(period, entry, error));
+
+  if (period.status !== 'DRAFT') {
+    return res.status(409).render('error', {
+      message: 'This payroll period is no longer in Draft and cannot be edited. Use an adjustment for corrections.',
+    });
+  }
+
+  const { description, amount } = req.body;
+  const amountCents = pesosToCents(amount);
+  if (!description || !description.trim()) {
+    return renderWithError('Enter a description for this addition.');
+  }
+  if (!amountCents || amountCents <= 0) {
+    return renderWithError('Enter an amount greater than zero.');
+  }
+
+  db.prepare(
+    'INSERT INTO payroll_entry_adjustments (payroll_entry_id, description, amount_cents) VALUES (?, ?, ?)'
+  ).run(entry.id, description.trim(), amountCents);
+  recomputeEntryTotals(entry.id);
+
+  logAction(
+    req.session.user.id,
+    'CREATE',
+    'payroll_entry_adjustment',
+    entry.id,
+    `Added adjustment "${description.trim()}" of ₱${(amountCents / 100).toFixed(2)} for employee ${entry.employee_id} in period ${period.id}`
+  );
+  res.redirect(`/payroll/${period.id}/entries/${entry.id}`);
+});
+
+// ---- Delete an adjustment line ----
+router.post(
+  '/:id/entries/:entryId/adjustments/:adjustmentId/delete',
+  requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'),
+  (req, res) => {
+    const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
+    if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
+    if (!assertCompanyScope(req, period.company_id)) {
+      return res.status(403).render('error', { message: 'You do not have access to this payroll period.' });
+    }
+    if (period.status !== 'DRAFT') {
+      return res.status(409).render('error', {
+        message: 'This payroll period is no longer in Draft and cannot be edited. Use an adjustment for corrections.',
+      });
+    }
+    const entry = db
+      .prepare('SELECT * FROM payroll_entries WHERE id = ? AND payroll_period_id = ?')
+      .get(req.params.entryId, period.id);
+    if (!entry) return res.status(404).render('error', { message: 'Payroll entry not found.' });
+
+    const adjustment = db
+      .prepare('SELECT * FROM payroll_entry_adjustments WHERE id = ? AND payroll_entry_id = ?')
+      .get(req.params.adjustmentId, entry.id);
+    if (!adjustment) return res.status(404).render('error', { message: 'Adjustment not found.' });
+
+    db.prepare('DELETE FROM payroll_entry_adjustments WHERE id = ?').run(adjustment.id);
+    recomputeEntryTotals(entry.id);
+
+    logAction(
+      req.session.user.id,
+      'DELETE',
+      'payroll_entry_adjustment',
+      entry.id,
+      `Removed adjustment "${adjustment.description}" for employee ${entry.employee_id} in period ${period.id}`
     );
     res.redirect(`/payroll/${period.id}/entries/${entry.id}`);
   }

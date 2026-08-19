@@ -115,6 +115,25 @@ Demo accounts (from `npm run seed` / `setup.bat`):
     reconsider before real production use with more than one admin).
     A dedicated `PAYROLL_APPROVER` role exists that can view and
     approve/return periods but cannot create, edit, or manage structure.
+  - **Loans & cash advances** (`/loans`): create a loan (SSS/Pag-IBIG/
+    company loan/cash advance/other) with a principal and a suggested
+    per-period installment. Apply a deduction to it from an employee's
+    payroll entry — the amount can't exceed the remaining balance, the
+    loan's balance drops immediately, and it auto-marks `COMPLETED` at
+    zero. Removing an applied deduction (while the period is still
+    `DRAFT`) restores the balance. A loan can only be cancelled before any
+    deduction has been applied to it.
+  - **Other Income / Adjustments**: free-form additions (allowances,
+    reimbursements, one-off bonuses) per entry, added straight into gross
+    pay before statutory deductions are computed.
+  - **Payroll entry UI**: each employee's entry is a single tabbed page —
+    *Days Present* (a spreadsheet: one row per day type — Regular, Rest
+    Day, Special Holiday, Regular Holiday, and their Rest-Day combos —
+    with Days / OT hours / ND hours as three inputs per row, one Save per
+    row), *Other Income / Adjustments*, and *Deductions* (statutory +
+    loans). Built to match a UI design provided directly by the user
+    (tab-based, spreadsheet-style, minimal clicks) rather than the earlier
+    add-one-line-at-a-time flow.
 - **Tenant isolation**: every non-super-admin request is scoped to the
   user's own `company_id` server-side (`getScopedCompanyId` /
   `assertCompanyScope` in `middleware/auth.js`), regardless of what a
@@ -128,19 +147,24 @@ Demo accounts (from `npm run seed` / `setup.bat`):
 
 ## Deliberately deferred to later phases (per the build spec's own plan)
 
-- Loans/cash advances, leave (SL/VL), 13th month pay, de minimis benefits,
-  and year-end tax annualization — Regular pay, the day-type-aware premium
-  pay types, and the core statutory deductions above are now covered.
+- 13th month pay, leave (SL/VL), de minimis benefits, and year-end tax
+  annualization — Regular pay, day-type-aware premium pay, statutory
+  deductions, loans/advances, and free-form additions are now covered.
+- **Payslip generation** (printable/PDF per employee) and **payroll
+  reports/exports** (register, summaries) — next up.
 - **Payroll Studio** / configurable formula engine — Phase 1 uses one fixed
   (but isolated, in `utils/payroll-calc.js`) basic-pay formula so the rest
   of the pipeline (period lifecycle, locking, audit, segregation of duties)
   could be proven first.
-- Reports/exports, pagination on large lists, and automated test suite.
+- Pagination on large lists, and an automated test suite.
 - Reusing the reference repo's actual UI components — this phase matches
   the reference's design system (colors, typography, layout, component
   conventions) using plain server-rendered EJS + Bootstrap 5 rather than
   porting Vue components, since our stack is Express/EJS, not Vue/Vite.
   Visually consistent; not the same component code.
+- Employee records don't yet capture hire date, department, or position —
+  the entry page header shows what's actually tracked (Employee No.,
+  Branch, Client, Rate) rather than fields that don't exist yet.
 
 ## Project layout
 

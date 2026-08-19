@@ -2,140 +2,247 @@
 
 <div class="page-header">
   <div>
-    <span class="eyebrow">Payroll · <%= period.name %></span>
-    <h4 class="mb-0"><%= entry.last_name %>, <%= entry.first_name %> <span class="text-muted fw-normal">(<%= entry.employee_no %>)</span></h4>
+    <span class="eyebrow">Payroll · <%= period.name %> <span class="badge-pill badge-pill--muted"><%= period.status.replace('_',' ') %></span></span>
+    <h4 class="mb-0">
+      <%= entry.last_name %>, <%= entry.first_name %>
+      <span class="badge-pill <%= entry.employee_status === 'ACTIVE' ? 'badge-pill--green' : 'badge-pill--muted' %>"><%= entry.employee_status %></span>
+    </h4>
+    <p class="text-muted small mb-0 mt-1">
+      <%= entry.employee_no %>
+      <% if (entry.branch_name) { %> | <%= entry.branch_name %><% } %>
+      <% if (entry.client_name) { %> | <%= entry.client_name %><% } %>
+      · <%= entry.rate_type %> rate: ₱<%= (entry.rate_amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %><%= entry.rate_type === 'DAILY' ? '/day' : '/month' %>
+      <% if (!canEdit) { %> · <span class="text-danger">Locked — period is <%= period.status.replace('_',' ') %></span><% } %>
+    </p>
+  </div>
+  <div class="card p-2" style="min-width:320px;">
+    <table class="table table-sm mb-0 text-center">
+      <thead><tr><th>Additions</th><th>Deductions</th><th>Net</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="figure text-success">+₱<%= (entry.adjustments_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="figure text-danger">-₱<%= (entry.total_deductions_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="figure fw-bold">₱<%= (entry.net_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </div>
-<p class="text-muted small mt-n2 mb-3">
-  <%= entry.rate_type %> rate: ₱<%= (entry.rate_amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %>
-  <% if (!canEdit) { %> · <span class="badge-pill badge-pill--muted">Locked — period is <%= period.status.replace('_',' ') %></span><% } %>
-</p>
 
 <% if (error) { %><div class="alert alert-danger py-2 small"><%= error %></div><% } %>
 
-<div class="card p-3 mb-3">
-  <div class="eyebrow mb-2">Regular Pay</div>
-  <% if (canEdit) { %>
-    <form method="POST" action="/payroll/<%= period.id %>/entries/<%= entry.id %>" class="d-flex align-items-end gap-2">
-      <div>
-        <label class="form-label">Days Paid</label>
-        <input class="form-control form-control-sm" style="width:120px;" type="number" step="0.5" min="0" name="days_paid" value="<%= entry.days_paid %>" />
-      </div>
-      <button class="btn btn-outline-primary btn-sm" type="submit">Save</button>
-      <span class="text-muted small ms-2">Regular pay: ₱<%= (entry.basic_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></span>
-    </form>
-  <% } else { %>
-    <p class="mb-0"><%= entry.days_paid %> day(s) · ₱<%= (entry.basic_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></p>
-  <% } %>
-</div>
+<ul class="nav nav-tabs mb-3" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#days-tab" type="button" role="tab">
+      <i class="bi bi-calendar-week"></i> Days Present
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#additions-tab" type="button" role="tab">
+      <i class="bi bi-plus-circle"></i> Other Income / Adjustments
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#deductions-tab" type="button" role="tab">
+      <i class="bi bi-dash-circle"></i> Deductions
+    </button>
+  </li>
+</ul>
 
-<div class="card mb-3">
-  <div class="p-3 pb-0">
-    <div class="eyebrow">Premium Pay (Overtime, Night Differential, Rest Day, Holiday)</div>
-  </div>
-  <table class="table table-hover mb-0">
-    <thead>
-      <tr><th class="ps-3">Pay Type</th><th class="text-end">Quantity</th><th>Basis</th><th class="text-end">Amount</th><% if (canEdit) { %><th class="table-actions pe-3">Actions</th><% } %></tr>
-    </thead>
-    <tbody>
-      <% lines.forEach(function(l) { %>
-        <% var def = payTypes[l.pay_type]; %>
-        <tr>
-          <td class="ps-3 fw-medium"><%= def ? def.label : l.pay_type %></td>
-          <td class="text-end figure"><%= l.quantity %> <%= def && def.basis === 'HOURS' ? 'hr(s)' : 'day(s)' %></td>
-          <td class="text-muted small"><%= def ? def.note : '—' %></td>
-          <td class="text-end figure">₱<%= (l.amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-          <% if (canEdit) { %>
-            <td class="table-actions pe-3">
-              <form method="POST" action="/payroll/<%= period.id %>/entries/<%= entry.id %>/lines/<%= l.id %>/delete" class="d-inline">
-                <button class="row-action-link row-action-link--danger" type="submit" onclick="return confirm('Remove this pay type line?')">Remove</button>
-              </form>
-            </td>
-          <% } %>
-        </tr>
-      <% }); %>
-    </tbody>
-  </table>
-  <% if (lines.length === 0) { %>
-    <div class="empty-state"><i class="bi bi-cash-stack"></i>No premium pay lines yet.</div>
-  <% } %>
+<div class="tab-content">
 
-  <% if (canEdit) { %>
-    <div class="p-3 border-top">
-      <div class="eyebrow mb-2">Add a pay type</div>
-      <form method="POST" action="/payroll/<%= period.id %>/entries/<%= entry.id %>/lines" class="row g-2 align-items-end">
-        <div class="col-auto">
-          <label class="form-label">Pay Type</label>
-          <select name="pay_type" class="form-select form-select-sm" style="min-width:340px;" required>
-            <% var groups = {}; Object.keys(payTypes).forEach(function(key) {
-                 var g = payTypes[key].group;
-                 groups[g] = groups[g] || [];
-                 groups[g].push(key);
-               }); %>
-            <% Object.keys(groups).forEach(function(groupName) { %>
-              <optgroup label="<%= groupName %>">
-                <% groups[groupName].forEach(function(key) { %>
-                  <option value="<%= key %>"><%= payTypes[key].label %> (<%= (payTypes[key].multiplier * 100).toFixed(1) %>%)</option>
-                <% }); %>
-              </optgroup>
-            <% }); %>
-          </select>
-        </div>
-        <div class="col-auto">
-          <label class="form-label">Quantity</label>
-          <input type="number" step="0.5" min="0.5" name="quantity" class="form-control form-control-sm" style="width:100px;" placeholder="hrs / days" required />
-        </div>
-        <div class="col-auto">
-          <button class="btn btn-primary btn-sm" type="submit">Add Line</button>
-        </div>
-      </form>
-      <p class="hint mt-2">
-        Rest Day / Holiday lines are the FULL day's pay at the listed % of the daily
-        rate — combinations (e.g. a Special Holiday that's also a Rest Day) use their
-        own DOLE-mandated combined rate rather than two stacked lines, since 130% +
-        130% overstates the actual 150% combined rate. Overtime and Night Differential
-        each have an Ordinary-Day rate plus one variant per day type, correctly scaled
-        off that day's applicable rate. These are standard DOLE defaults, not a
-        certified compliance engine — different CBAs/companies may use different
-        rates (a later "Payroll Studio" phase will make these configurable).
-      </p>
+  <!-- ===== Days Present (spreadsheet) ===== -->
+  <div class="tab-pane fade show active" id="days-tab" role="tabpanel">
+    <div class="card">
+      <table class="table table-hover mb-0 align-middle">
+        <thead>
+          <tr>
+            <th class="ps-3">Type of Day</th>
+            <th class="text-end" style="width:90px;">Days</th>
+            <th class="text-end" style="width:90px;">OT Hrs</th>
+            <th class="text-end" style="width:90px;">ND Hrs</th>
+            <th class="text-end">Day Pay</th>
+            <th class="text-end">OT Pay</th>
+            <th class="text-end">ND Pay</th>
+            <th class="text-end pe-3">Row Total</th>
+            <% if (canEdit) { %><th class="pe-3"></th><% } %>
+          </tr>
+        </thead>
+        <tbody>
+          <% dayRows.forEach(function(r) { %>
+            <tr class="<%= r.rowTotal === 0 ? 'text-muted' : '' %>">
+              <td class="ps-3 fw-medium"><%= r.label %></td>
+              <td class="text-end">
+                <% if (canEdit) { %>
+                  <input form="row-<%= r.key %>" type="number" step="0.5" min="0" name="days" value="<%= r.dayQty %>" class="form-control form-control-sm text-end d-inline-block" style="width:80px;" />
+                <% } else { %><%= r.dayQty %><% } %>
+              </td>
+              <td class="text-end">
+                <% if (canEdit) { %>
+                  <input form="row-<%= r.key %>" type="number" step="0.5" min="0" name="ot_hours" value="<%= r.otQty %>" class="form-control form-control-sm text-end d-inline-block" style="width:80px;" />
+                <% } else { %><%= r.otQty %><% } %>
+              </td>
+              <td class="text-end">
+                <% if (canEdit) { %>
+                  <input form="row-<%= r.key %>" type="number" step="0.5" min="0" name="nd_hours" value="<%= r.ndQty %>" class="form-control form-control-sm text-end d-inline-block" style="width:80px;" />
+                <% } else { %><%= r.ndQty %><% } %>
+              </td>
+              <td class="text-end figure">₱<%= (r.dayAmount / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <td class="text-end figure">₱<%= (r.otAmount / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <td class="text-end figure">₱<%= (r.ndAmount / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <td class="text-end figure fw-medium pe-3">₱<%= (r.rowTotal / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <% if (canEdit) { %>
+                <td class="pe-3"><button form="row-<%= r.key %>" class="btn btn-outline-primary btn-sm" type="submit">Save</button></td>
+              <% } %>
+            </tr>
+          <% }); %>
+        </tbody>
+        <tfoot>
+          <tr class="totals-row">
+            <td colspan="4" class="ps-3">Total</td>
+            <td class="text-end figure" colspan="3">Regular + Premium</td>
+            <td class="text-end figure pe-3" colspan="<%= canEdit ? 2 : 1 %>">₱<%= ((entry.basic_pay_cents + entry.premium_pay_cents) / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
-  <% } %>
-</div>
+    <p class="hint mt-2">
+      Each row's rate already reflects the DOLE-mandated combined multiplier for that day type
+      (e.g. Special Holiday on a Rest Day is 150%, not 130% + 130%). One Save per row applies all
+      three cells at once. Standard defaults, not a certified compliance engine.
+    </p>
 
-<div class="card p-3 mb-3">
-  <div class="eyebrow mb-2">Statutory Deductions (auto-computed)</div>
-  <p class="text-muted small mb-2">
-    Based on this period's gross pay, scaled to a monthly-equivalent using the period's
-    <strong><%= period.pay_frequency.replace('_',' ') %></strong> frequency, then scaled back down.
-    Standard 2025–2026 rates — SSS 15% (5% EE/10% ER) of MSC ₱5,000–₱35,000; PhilHealth 5% (2.5%/2.5%)
-    of ₱10,000–₱100,000; Pag-IBIG 1–2% EE / 2% ER capped at a ₱10,000 base; BIR monthly withholding
-    tax table (TRAIN law, effective 2023 onward). Verify against SSS/PhilHealth/Pag-IBIG/BIR — this is
-    not a certified compliance engine.
-  </p>
-  <table class="table mb-0" style="max-width:480px;">
-    <thead><tr><th>Deduction</th><th class="text-end">Employee Share</th><th class="text-end">Employer Share</th></tr></thead>
-    <tbody>
-      <tr><td>SSS</td><td class="text-end figure">₱<%= (entry.sss_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end figure text-muted">₱<%= (entry.sss_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
-      <tr><td>PhilHealth</td><td class="text-end figure">₱<%= (entry.philhealth_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end figure text-muted">₱<%= (entry.philhealth_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
-      <tr><td>Pag-IBIG</td><td class="text-end figure">₱<%= (entry.pagibig_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end figure text-muted">₱<%= (entry.pagibig_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
-      <tr><td>Withholding Tax</td><td class="text-end figure">₱<%= (entry.withholding_tax_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end text-muted">—</td></tr>
-      <tr class="totals-row"><td>Total Deductions</td><td class="text-end figure">₱<%= (entry.total_deductions_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td></td></tr>
-    </tbody>
-  </table>
-</div>
+    <% if (canEdit) { %>
+      <% dayRows.forEach(function(r) { %>
+        <form id="row-<%= r.key %>" method="POST" action="/payroll/<%= period.id %>/entries/<%= entry.id %>/day-row" class="d-none">
+          <input type="hidden" name="day_type" value="<%= r.key %>" />
+        </form>
+      <% }); %>
+    <% } %>
+  </div>
 
-<div class="card p-3 mb-3">
-  <div class="eyebrow mb-2">Entry Totals</div>
-  <table class="table mb-0" style="max-width:360px;">
-    <tbody>
-      <tr><td>Regular</td><td class="text-end figure">₱<%= (entry.basic_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
-      <tr><td>Premium</td><td class="text-end figure">₱<%= (entry.premium_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
-      <tr class="totals-row"><td>Gross</td><td class="text-end figure">₱<%= (entry.gross_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
-      <tr><td>Deductions</td><td class="text-end figure text-danger">-₱<%= (entry.total_deductions_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
-      <tr class="totals-row"><td>Net Pay</td><td class="text-end figure">₱<%= (entry.net_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
-    </tbody>
-  </table>
+  <!-- ===== Other Income / Adjustments ===== -->
+  <div class="tab-pane fade" id="additions-tab" role="tabpanel">
+    <div class="card">
+      <table class="table table-hover mb-0">
+        <thead><tr><th class="ps-3">Description</th><th class="text-end">Amount</th><% if (canEdit) { %><th class="table-actions pe-3">Actions</th><% } %></tr></thead>
+        <tbody>
+          <% adjustments.forEach(function(a) { %>
+            <tr>
+              <td class="ps-3"><%= a.description %></td>
+              <td class="text-end figure">₱<%= (a.amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <% if (canEdit) { %>
+                <td class="table-actions pe-3">
+                  <form method="POST" action="/payroll/<%= period.id %>/entries/<%= entry.id %>/adjustments/<%= a.id %>/delete" class="d-inline">
+                    <button class="row-action-link row-action-link--danger" type="submit" onclick="return confirm('Remove this addition?')">Remove</button>
+                  </form>
+                </td>
+              <% } %>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+      <% if (adjustments.length === 0) { %>
+        <div class="empty-state"><i class="bi bi-plus-circle"></i>No additions yet — allowances, reimbursements, or one-off bonuses go here.</div>
+      <% } %>
+      <% if (canEdit) { %>
+        <div class="p-3 border-top">
+          <div class="eyebrow mb-2">Add an item</div>
+          <form method="POST" action="/payroll/<%= period.id %>/entries/<%= entry.id %>/adjustments" class="row g-2 align-items-end">
+            <div class="col-auto">
+              <label class="form-label">Description</label>
+              <input type="text" name="description" class="form-control form-control-sm" style="width:260px;" maxlength="200" required />
+            </div>
+            <div class="col-auto">
+              <label class="form-label">Amount (₱)</label>
+              <input type="number" step="0.01" min="0.01" name="amount" class="form-control form-control-sm" style="width:120px;" required />
+            </div>
+            <div class="col-auto"><button class="btn btn-primary btn-sm" type="submit">Add</button></div>
+          </form>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- ===== Deductions ===== -->
+  <div class="tab-pane fade" id="deductions-tab" role="tabpanel">
+    <div class="card p-3 mb-3">
+      <div class="eyebrow mb-2">Loan / Cash Advance Deductions</div>
+      <table class="table table-hover mb-0">
+        <thead><tr><th class="ps-3">Loan</th><th class="text-end">Amount</th><% if (canEdit) { %><th class="table-actions pe-3">Actions</th><% } %></tr></thead>
+        <tbody>
+          <% loanDeductions.forEach(function(d) { %>
+            <tr>
+              <td class="ps-3 fw-medium">
+                <a href="/loans/<%= d.loan_id %>"><%= loanTypes[d.loan_type] || d.loan_type %></a>
+                <% if (d.loan_description) { %><span class="text-muted small"> — <%= d.loan_description %></span><% } %>
+              </td>
+              <td class="text-end figure">₱<%= (d.amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <% if (canEdit) { %>
+                <td class="table-actions pe-3">
+                  <form method="POST" action="/payroll/<%= period.id %>/entries/<%= entry.id %>/loan-deductions/<%= d.id %>/delete" class="d-inline">
+                    <button class="row-action-link row-action-link--danger" type="submit" onclick="return confirm('Remove this loan deduction? It will be added back to the loan balance.')">Remove</button>
+                  </form>
+                </td>
+              <% } %>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+      <% if (loanDeductions.length === 0) { %>
+        <div class="empty-state"><i class="bi bi-wallet2"></i>No loan deductions applied yet.</div>
+      <% } %>
+      <% if (canEdit) { %>
+        <div class="pt-3 border-top mt-2">
+          <% if (availableLoans.length === 0) { %>
+            <p class="text-muted small mb-0">This employee has no active loans with a remaining balance. <a href="/loans/new">Create one</a> if needed.</p>
+          <% } else { %>
+            <div class="eyebrow mb-2">Apply a deduction</div>
+            <form method="POST" action="/payroll/<%= period.id %>/entries/<%= entry.id %>/loan-deductions" class="row g-2 align-items-end">
+              <div class="col-auto">
+                <label class="form-label">Loan</label>
+                <select name="loan_id" class="form-select form-select-sm" style="min-width:280px;" required>
+                  <% availableLoans.forEach(function(l) { %>
+                    <option value="<%= l.id %>">
+                      <%= loanTypes[l.loan_type] || l.loan_type %><% if (l.description) { %> — <%= l.description %><% } %>
+                      (balance ₱<%= (l.balance_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %>)
+                    </option>
+                  <% }); %>
+                </select>
+              </div>
+              <div class="col-auto">
+                <label class="form-label">Amount (₱)</label>
+                <input type="number" step="0.01" min="0.01" name="amount" class="form-control form-control-sm" style="width:120px;" required />
+              </div>
+              <div class="col-auto"><button class="btn btn-primary btn-sm" type="submit">Apply</button></div>
+            </form>
+            <p class="hint mt-2">Amount cannot exceed the loan's remaining balance. Removing a deduction restores it to the balance.</p>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card p-3">
+      <div class="eyebrow mb-2">Statutory Deductions (auto-computed)</div>
+      <p class="text-muted small mb-2">
+        Based on this entry's gross pay, scaled to a monthly-equivalent using the period's
+        <strong><%= period.pay_frequency.replace('_',' ') %></strong> frequency, then scaled back down.
+        Standard 2025–2026 rates — verify against SSS/PhilHealth/Pag-IBIG/BIR; not a certified compliance engine.
+      </p>
+      <table class="table mb-0" style="max-width:480px;">
+        <thead><tr><th>Deduction</th><th class="text-end">Employee Share</th><th class="text-end">Employer Share</th></tr></thead>
+        <tbody>
+          <tr><td>SSS</td><td class="text-end figure">₱<%= (entry.sss_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end figure text-muted">₱<%= (entry.sss_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
+          <tr><td>PhilHealth</td><td class="text-end figure">₱<%= (entry.philhealth_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end figure text-muted">₱<%= (entry.philhealth_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
+          <tr><td>Pag-IBIG</td><td class="text-end figure">₱<%= (entry.pagibig_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end figure text-muted">₱<%= (entry.pagibig_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
+          <tr><td>Withholding Tax</td><td class="text-end figure">₱<%= (entry.withholding_tax_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end text-muted">—</td></tr>
+          <tr><td>Loan / Cash Advance</td><td class="text-end figure">₱<%= (entry.loan_deduction_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end text-muted">—</td></tr>
+          <tr class="totals-row"><td>Total Deductions</td><td class="text-end figure">₱<%= (entry.total_deductions_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 
 <div class="mt-3"><a href="/payroll/<%= period.id %>"><i class="bi bi-arrow-left"></i> Back to <%= period.name %></a></div>

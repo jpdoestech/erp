@@ -128,11 +128,61 @@ function computeLineAmount({ payType, quantity, rateType, rateAmountCents }) {
   return Math.round(rateCents * def.multiplier * qty);
 }
 
+// Row order for the "Days Present" spreadsheet: Regular first, then each
+// non-ordinary day type. Every row has a Days/OT-hours/ND-hours cell, each
+// backed by its own PAY_TYPES key (or, for Regular's day count, the parent
+// payroll_entries row itself rather than a line).
+const DAY_ROW_ORDER = ['REGULAR', ...Object.keys(DAY_TYPES)];
+
+function dayRowLabel(key) {
+  return key === 'REGULAR' ? 'Regular' : DAY_TYPES[key].label;
+}
+
+// Builds one spreadsheet row per day type from the entry (for Regular) and
+// its payroll_entry_lines (for everything else), pairing each day type with
+// its own OT/ND pay-type variant so the row's three cells stay consistent
+// with whichever combined rate applies to that day.
+function buildDayRows(entry, lines) {
+  const findLine = (payType) => lines.find((l) => l.pay_type === payType);
+  return DAY_ROW_ORDER.map((key) => {
+    const isRegular = key === 'REGULAR';
+    const otKey = isRegular ? 'OT' : `OT_${key}`;
+    const ndKey = isRegular ? 'ND' : `ND_${key}`;
+    const dayLine = isRegular ? null : findLine(key);
+    const otLine = findLine(otKey);
+    const ndLine = findLine(ndKey);
+
+    const dayQty = isRegular ? entry.days_paid : dayLine ? dayLine.quantity : 0;
+    const dayAmount = isRegular ? entry.basic_pay_cents : dayLine ? dayLine.amount_cents : 0;
+    const otQty = otLine ? otLine.quantity : 0;
+    const otAmount = otLine ? otLine.amount_cents : 0;
+    const ndQty = ndLine ? ndLine.quantity : 0;
+    const ndAmount = ndLine ? ndLine.amount_cents : 0;
+
+    return {
+      key,
+      label: dayRowLabel(key),
+      dayKey: isRegular ? null : key,
+      otKey,
+      ndKey,
+      dayQty,
+      dayAmount,
+      otQty,
+      otAmount,
+      ndQty,
+      ndAmount,
+      rowTotal: dayAmount + otAmount + ndAmount,
+    };
+  });
+}
+
 module.exports = {
   computeEntry,
   computeLineAmount,
   dailyRateCents,
   hourlyRateCents,
+  buildDayRows,
+  DAY_ROW_ORDER,
   PAY_TYPES,
   DAY_TYPES,
   STANDARD_MONTHLY_DIVISOR,

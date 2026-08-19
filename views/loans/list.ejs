@@ -1,0 +1,46 @@
+<%- include('../partials/header', { title: 'Loans & Advances' }) %>
+
+<div class="page-header">
+  <div><span class="eyebrow">Workforce</span><h4 class="mb-0">Loans &amp; Cash Advances</h4></div>
+  <% if (['SUPER_ADMIN','COMPANY_ADMIN'].includes(currentUser.role)) { %>
+    <a class="btn btn-primary btn-sm" href="/loans/new<%= selectedCompanyId ? '?company_id=' + selectedCompanyId : '' %>"><i class="bi bi-plus-lg"></i> New loan</a>
+  <% } %>
+</div>
+
+<%- include('../partials/company-picker', { basePath: '/loans' }) %>
+
+<div class="card">
+  <table class="table table-hover mb-0">
+    <thead>
+      <tr>
+        <th class="ps-3">Employee</th><th>Type</th><th>Description</th>
+        <th class="text-end">Principal</th><th class="text-end">Balance</th>
+        <th class="text-end">Installment</th><th>Status</th><th class="table-actions pe-3">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% loans.forEach(function(l) { %>
+        <% var cls = { ACTIVE: 'badge-pill--blue', COMPLETED: 'badge-pill--green', CANCELLED: 'badge-pill--muted' }[l.status]; %>
+        <tr>
+          <td class="ps-3 fw-medium"><%= l.last_name %>, <%= l.first_name %> <span class="text-muted small">(<%= l.employee_no %>)</span></td>
+          <td class="text-muted"><%= loanTypes[l.loan_type] || l.loan_type %></td>
+          <td class="text-muted"><%= l.description || '—' %></td>
+          <td class="text-end figure">₱<%= (l.principal_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end figure fw-medium">₱<%= (l.balance_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end figure">₱<%= (l.installment_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td><span class="badge-pill <%= cls %>"><%= l.status %></span></td>
+          <td class="table-actions pe-3">
+            <span class="row-action-links"><a class="row-action-link" href="/loans/<%= l.id %>">View</a></span>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% if (!selectedCompanyId) { %>
+    <div class="empty-state"><i class="bi bi-wallet2"></i>Select a company to view its loans.</div>
+  <% } else if (loans.length === 0) { %>
+    <div class="empty-state"><i class="bi bi-wallet2"></i>No loans or cash advances yet for this company.</div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

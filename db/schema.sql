@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS payroll_entries (
   rate_amount_cents INTEGER NOT NULL,
   basic_pay_cents INTEGER NOT NULL DEFAULT 0,
   premium_pay_cents INTEGER NOT NULL DEFAULT 0,
+  adjustments_cents INTEGER NOT NULL DEFAULT 0,
   gross_pay_cents INTEGER NOT NULL DEFAULT 0,
   sss_employee_cents INTEGER NOT NULL DEFAULT 0,
   sss_employer_cents INTEGER NOT NULL DEFAULT 0,
@@ -102,6 +103,7 @@ CREATE TABLE IF NOT EXISTS payroll_entries (
   pagibig_employee_cents INTEGER NOT NULL DEFAULT 0,
   pagibig_employer_cents INTEGER NOT NULL DEFAULT 0,
   withholding_tax_cents INTEGER NOT NULL DEFAULT 0,
+  loan_deduction_cents INTEGER NOT NULL DEFAULT 0,
   total_deductions_cents INTEGER NOT NULL DEFAULT 0,
   net_pay_cents INTEGER NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
@@ -120,6 +122,43 @@ CREATE TABLE IF NOT EXISTS payroll_entry_lines (
   pay_type TEXT NOT NULL,
   quantity REAL NOT NULL DEFAULT 0,
   amount_cents INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Employee loans and cash advances. balance_cents decreases as deductions are
+-- applied to payroll entries (symmetric add/remove while a period is DRAFT,
+-- same pattern as payroll_entry_lines above).
+CREATE TABLE IF NOT EXISTS employee_loans (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  employee_id INTEGER NOT NULL REFERENCES employees(id),
+  company_id INTEGER NOT NULL REFERENCES companies(id),
+  loan_type TEXT NOT NULL CHECK(loan_type IN ('SSS_LOAN','PAGIBIG_LOAN','COMPANY_LOAN','CASH_ADVANCE','OTHER')),
+  description TEXT,
+  principal_cents INTEGER NOT NULL,
+  balance_cents INTEGER NOT NULL,
+  installment_cents INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE','COMPLETED','CANCELLED')),
+  created_by INTEGER REFERENCES users(id),
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- One row per period a loan was deducted in. Deleting a row (only while the
+-- period is DRAFT) restores the amount to the loan's balance.
+CREATE TABLE IF NOT EXISTS payroll_loan_deductions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  payroll_entry_id INTEGER NOT NULL REFERENCES payroll_entries(id),
+  loan_id INTEGER NOT NULL REFERENCES employee_loans(id),
+  amount_cents INTEGER NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Free-form additions ("Other Income / Adjustments") on a payroll entry --
+-- e.g. allowances, reimbursements, one-off bonuses. Added to gross pay.
+CREATE TABLE IF NOT EXISTS payroll_entry_adjustments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  payroll_entry_id INTEGER NOT NULL REFERENCES payroll_entries(id),
+  description TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
