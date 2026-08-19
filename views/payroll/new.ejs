@@ -20,6 +20,16 @@
       <label class="form-label">Period Name</label>
       <input type="text" name="name" class="form-control" value="<%= values.name || '' %>" placeholder="e.g. August 1-15, 2026" required maxlength="80" />
     </div>
+    <div class="mb-3">
+      <label class="form-label">Pay Frequency</label>
+      <select name="pay_frequency" class="form-select">
+        <option value="SEMI_MONTHLY" selected>Semi-Monthly (2x/month)</option>
+        <option value="MONTHLY">Monthly (1x/month)</option>
+        <option value="BIWEEKLY">Bi-Weekly (~26x/year)</option>
+        <option value="WEEKLY">Weekly (~52x/year)</option>
+      </select>
+      <div class="hint">Used to prorate SSS/PhilHealth/Pag-IBIG/withholding tax correctly across periods in the same month.</div>
+    </div>
     <div class="row g-3 mb-3">
       <div class="col-md-6">
         <label class="form-label">Period Start</label>

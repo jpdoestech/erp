@@ -59,6 +59,50 @@ Demo accounts (from `npm run seed` / `setup.bat`):
     `days_paid × (monthly_rate / 26)` (monthly employees). The 26-day
     divisor is a placeholder default, not a hard-coded rule — it's meant to
     become a configurable Payroll Studio input.
+  - **Premium pay types**, added per employee on top of Regular pay, using
+    standard DOLE default multipliers (isolated in
+    `utils/payroll-calc.js`, not hard-coded elsewhere). Each day type has
+    its own combined rate — a Special Holiday that also falls on the
+    employee's Rest Day uses the actual 150% DOLE combo rate as one line,
+    not two stacked 130% lines (which would overstate pay at 260%):
+
+    | Day type | Full-day rate | + Overtime (per OT hr) | + Night Diff. (per hr) |
+    |---|---|---|---|
+    | Ordinary day | *(Regular pay field)* | 125% | +10% |
+    | Rest Day | 130% | 169% | +13% |
+    | Special (Non-Regular) Holiday | 130% | 169% | +13% |
+    | Special Holiday on a Rest Day | 150% | 195% | +15% |
+    | Regular Holiday | 200% | 260% | +20% |
+    | Regular Holiday on a Rest Day | 260% | 338% | +26% |
+
+    (Percentages are of the daily rate for full-day pay, or the hourly rate
+    for OT/ND.) These are standard private-sector defaults, **not a
+    certified DOLE compliance engine** — a CBA or company policy may
+    legally use different rates. Open an employee's entry (via "Manage" on
+    the period page) to add or remove pay-type lines, grouped by category
+    in the dropdown; each entry shows Regular + Premium + Gross + Net.
+  - **Government contributions & withholding tax**, auto-computed on every
+    entry from its own gross pay (`utils/gov-deductions.js`):
+
+    | Deduction | Employee | Employer | Basis |
+    |---|---|---|---|
+    | SSS | 5% | 10% + EC (₱10/₱30) | Monthly Salary Credit, ₱5,000–₱35,000 |
+    | PhilHealth | 2.5% | 2.5% | Monthly salary, floor ₱10,000, ceiling ₱100,000 |
+    | Pag-IBIG | 1–2% | 2% | Monthly salary, capped at a ₱10,000 base |
+    | Withholding Tax | graduated 0–35% | — | BIR monthly bracket table (TRAIN law, 2023 onward) |
+
+    Rates verified current for 2025–2026 as of this writing (SSS Circular
+    2024-006; PhilHealth 5% confirmed unchanged for 2026 per a PIA
+    advisory; Pag-IBIG HDMF Circular 460; BIR Annex "E"). **These change by
+    law/circular — verify against SSS/PhilHealth/Pag-IBIG/BIR before relying
+    on this for actual remittances.** Every payroll period has a **Pay
+    Frequency** (Semi-Monthly by default, or Monthly/Bi-Weekly/Weekly) —
+    each entry's own gross pay is scaled to a monthly-equivalent to look up
+    the statutory tables, then scaled back down to that period's share, so
+    semi-monthly/weekly cutoffs aren't over- or under-deducted relative to a
+    full month. Net pay = Gross − (SSS + PhilHealth + Pag-IBIG + withholding
+    tax) employee shares; employer shares are shown for reference only and
+    don't affect the employee's net pay.
   - Workflow: `DRAFT → FOR_REVIEW → APPROVED → FINALIZED → POSTED`, with a
     `return-to-draft` step. Every transition is enforced server-side by
     current status, not just hidden/shown in the UI.
@@ -84,9 +128,9 @@ Demo accounts (from `npm run seed` / `setup.bat`):
 
 ## Deliberately deferred to later phases (per the build spec's own plan)
 
-- Overtime, night differential, holiday/rest-day pay, leave, government
-  contributions (SSS/PhilHealth/Pag-IBIG), withholding tax, loans/cash
-  advances — all payroll components beyond basic pay.
+- Loans/cash advances, leave (SL/VL), 13th month pay, de minimis benefits,
+  and year-end tax annualization — Regular pay, the day-type-aware premium
+  pay types, and the core statutory deductions above are now covered.
 - **Payroll Studio** / configurable formula engine — Phase 1 uses one fixed
   (but isolated, in `utils/payroll-calc.js`) basic-pay formula so the rest
   of the pipeline (period lifecycle, locking, audit, segregation of duties)

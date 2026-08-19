@@ -73,6 +73,8 @@ CREATE TABLE IF NOT EXISTS payroll_periods (
   period_start TEXT NOT NULL,
   period_end TEXT NOT NULL,
   pay_date TEXT,
+  pay_frequency TEXT NOT NULL DEFAULT 'SEMI_MONTHLY'
+    CHECK(pay_frequency IN ('MONTHLY','SEMI_MONTHLY','BIWEEKLY','WEEKLY')),
   status TEXT NOT NULL DEFAULT 'DRAFT'
     CHECK(status IN ('DRAFT','FOR_REVIEW','APPROVED','FINALIZED','POSTED')),
   created_by INTEGER REFERENCES users(id),
@@ -91,10 +93,34 @@ CREATE TABLE IF NOT EXISTS payroll_entries (
   rate_type TEXT NOT NULL,
   rate_amount_cents INTEGER NOT NULL,
   basic_pay_cents INTEGER NOT NULL DEFAULT 0,
+  premium_pay_cents INTEGER NOT NULL DEFAULT 0,
   gross_pay_cents INTEGER NOT NULL DEFAULT 0,
+  sss_employee_cents INTEGER NOT NULL DEFAULT 0,
+  sss_employer_cents INTEGER NOT NULL DEFAULT 0,
+  philhealth_employee_cents INTEGER NOT NULL DEFAULT 0,
+  philhealth_employer_cents INTEGER NOT NULL DEFAULT 0,
+  pagibig_employee_cents INTEGER NOT NULL DEFAULT 0,
+  pagibig_employer_cents INTEGER NOT NULL DEFAULT 0,
+  withholding_tax_cents INTEGER NOT NULL DEFAULT 0,
+  total_deductions_cents INTEGER NOT NULL DEFAULT 0,
   net_pay_cents INTEGER NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
   UNIQUE(payroll_period_id, employee_id)
+);
+
+-- One row per premium-pay component (any pay-type code from utils/payroll-calc.js:
+-- OT, ND, Rest Day, Holiday, and their day-type combinations) applied to a payroll
+-- entry. Regular pay itself stays on the parent payroll_entries row (days_paid /
+-- basic_pay_cents) rather than as a line here. pay_type is validated in
+-- application code (against PAY_TYPES), not via a DB CHECK constraint, so new
+-- pay types can be added without a schema migration.
+CREATE TABLE IF NOT EXISTS payroll_entry_lines (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  payroll_entry_id INTEGER NOT NULL REFERENCES payroll_entries(id),
+  pay_type TEXT NOT NULL,
+  quantity REAL NOT NULL DEFAULT 0,
+  amount_cents INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS audit_log (

@@ -3,7 +3,3 @@ db/erp.db
 db/erp.db-wal
 db/erp.db-shm
 .env
-
-# Instruction file
-.manual-setup-instructions.txt
-
