@@ -203,12 +203,41 @@ function buildEntryViewData(period, entry, error) {
     )
     .all(entryWithEmp.employee_id);
 
+  const dayRows = buildDayRows(entryWithEmp, lines);
+  const dayTotals = dayRows.reduce(
+    (acc, r) => {
+      acc.days += r.dayQty;
+      acc.ot += r.otQty;
+      acc.nd += r.ndQty;
+      acc.dayPay += r.dayAmount;
+      acc.otPay += r.otAmount;
+      acc.ndPay += r.ndAmount;
+      acc.rowTotal += r.rowTotal;
+      return acc;
+    },
+    { days: 0, ot: 0, nd: 0, dayPay: 0, otPay: 0, ndPay: 0, rowTotal: 0 }
+  );
+  // Multiplier data the client needs to live-calculate amounts as the user
+  // types, without a server round-trip per keystroke -- one Save per page.
+  const rowDefs = DAY_ROW_ORDER.map((key) => {
+    const otKey = key === 'REGULAR' ? 'OT' : `OT_${key}`;
+    const ndKey = key === 'REGULAR' ? 'ND' : `ND_${key}`;
+    return {
+      key,
+      dayMult: key === 'REGULAR' ? 1 : PAY_TYPES[key].multiplier,
+      otMult: PAY_TYPES[otKey].multiplier,
+      ndMult: PAY_TYPES[ndKey].multiplier,
+    };
+  });
+
   return {
     period,
     entry: entryWithEmp,
     lines,
     payTypes: PAY_TYPES,
-    dayRows: buildDayRows(entryWithEmp, lines),
+    dayRows,
+    dayTotals,
+    rowDefsJson: JSON.stringify(rowDefs),
     loanDeductions,
     adjustments,
     availableLoans,
@@ -279,7 +308,7 @@ router.post('/:id/entries/:entryId', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN')
 // ---- Save one "day type" spreadsheet row: Days / OT hours / ND hours in a single
 // submit. Upserts up to 3 underlying records (Regular uses the parent entry's own
 // days_paid/basic_pay_cents; every other day type + its OT/ND variant are lines).
-router.post('/:id/entries/:entryId/day-row', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
+router.post('/:id/entries/:entryId/days', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
   const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
   if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
   if (!assertCompanyScope(req, period.company_id)) {
@@ -290,17 +319,10 @@ router.post('/:id/entries/:entryId/day-row', requireRole('SUPER_ADMIN', 'COMPANY
     .get(req.params.entryId, period.id);
   if (!entry) return res.status(404).render('error', { message: 'Payroll entry not found.' });
 
-  const renderWithError = (error) => res.status(400).render('payroll/entry', buildEntryViewData(period, entry, error));
-
   if (period.status !== 'DRAFT') {
     return res.status(409).render('error', {
       message: 'This payroll period is no longer in Draft and cannot be edited. Use an adjustment for corrections.',
     });
-  }
-
-  const { day_type, days, ot_hours, nd_hours } = req.body;
-  if (!DAY_ROW_ORDER.includes(day_type)) {
-    return renderWithError('Unknown day type row.');
   }
 
   const upsertLine = (payType, qty) => {
@@ -319,25 +341,33 @@ router.post('/:id/entries/:entryId/day-row', requireRole('SUPER_ADMIN', 'COMPANY
     }
   };
 
+  // Saves every "day type" row (Regular + all 5 premium day types) from a single
+  // submit -- one Save button for the whole spreadsheet, matching how someone
+  // would actually fill in a timesheet, rather than one round-trip per row.
   const saveTxn = db.transaction(() => {
-    if (day_type === 'REGULAR') {
-      const daysQty = Math.max(0, Number(days) || 0);
-      const { basicPayCents } = computeEntry({
-        rateType: entry.rate_type,
-        rateAmountCents: entry.rate_amount_cents,
-        daysPaid: daysQty,
-      });
-      db.prepare('UPDATE payroll_entries SET days_paid = ?, basic_pay_cents = ? WHERE id = ?').run(
-        daysQty,
-        basicPayCents,
-        entry.id
-      );
-      upsertLine('OT', ot_hours);
-      upsertLine('ND', nd_hours);
-    } else {
-      upsertLine(day_type, days);
-      upsertLine(`OT_${day_type}`, ot_hours);
-      upsertLine(`ND_${day_type}`, nd_hours);
+    for (const key of DAY_ROW_ORDER) {
+      const days = req.body[`${key}_days`];
+      const ot = req.body[`${key}_ot`];
+      const nd = req.body[`${key}_nd`];
+      if (key === 'REGULAR') {
+        const daysQty = Math.max(0, Number(days) || 0);
+        const { basicPayCents } = computeEntry({
+          rateType: entry.rate_type,
+          rateAmountCents: entry.rate_amount_cents,
+          daysPaid: daysQty,
+        });
+        db.prepare('UPDATE payroll_entries SET days_paid = ?, basic_pay_cents = ? WHERE id = ?').run(
+          daysQty,
+          basicPayCents,
+          entry.id
+        );
+        upsertLine('OT', ot);
+        upsertLine('ND', nd);
+      } else {
+        upsertLine(key, days);
+        upsertLine(`OT_${key}`, ot);
+        upsertLine(`ND_${key}`, nd);
+      }
     }
   });
   saveTxn();
@@ -348,7 +378,7 @@ router.post('/:id/entries/:entryId/day-row', requireRole('SUPER_ADMIN', 'COMPANY
     'UPDATE',
     'payroll_entry',
     entry.id,
-    `Saved ${day_type} row (days=${days || 0}, OT=${ot_hours || 0}, ND=${nd_hours || 0}) for employee ${entry.employee_id} in period ${period.id}`
+    `Saved Days Present sheet for employee ${entry.employee_id} in period ${period.id}`
   );
   res.redirect(`/payroll/${period.id}/entries/${entry.id}`);
 });

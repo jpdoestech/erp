@@ -156,7 +156,7 @@ a:hover { text-decoration: underline; }
 /* ==========================================================================
    Panels, tables, badges, forms -- flat, dense, bordered (no shadows)
    ========================================================================== */
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: none; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: none; overflow-x: auto; }
 
 .table { --bs-table-bg: transparent; font-size: 0.83rem; margin-bottom: 0; }
 .table thead th {
@@ -211,3 +211,32 @@ a:hover { text-decoration: underline; }
 
 .hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; }
 .totals-row td { font-weight: 700; border-top: 2px solid var(--text); }
+
+/* Two-tier grouped headers (e.g. payroll Days Present spreadsheet) */
+.group-header { border-bottom: 1px solid var(--border); background: #f6f7f9; }
+
+/* Vertical stacked summary panel (Additions / Deductions / Net) */
+.summary-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1.1rem;
+  min-width: 220px;
+}
+.summary-panel__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.15rem 0;
+}
+.summary-panel__row--total { border-top: 1px solid var(--border-light); margin-top: 0.3rem; padding-top: 0.4rem; }
+.summary-panel__label { font-size: 0.8rem; font-weight: 600; }
+
+/* Responsive: stack the summary panel under the header on narrow screens,
+   and let wide tables scroll horizontally instead of squeezing columns. */
+@media (max-width: 900px) {
+  .page-header.flex-wrap { flex-direction: column; align-items: stretch; }
+  .summary-panel { width: 100%; }
+}
+.table-responsive .spreadsheet-table { min-width: 760px; }

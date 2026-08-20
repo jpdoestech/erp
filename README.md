@@ -129,11 +129,17 @@ Demo accounts (from `npm run seed` / `setup.bat`):
   - **Payroll entry UI**: each employee's entry is a single tabbed page —
     *Days Present* (a spreadsheet: one row per day type — Regular, Rest
     Day, Special Holiday, Regular Holiday, and their Rest-Day combos —
-    with Days / OT hours / ND hours as three inputs per row, one Save per
-    row), *Other Income / Adjustments*, and *Deductions* (statutory +
-    loans). Built to match a UI design provided directly by the user
-    (tab-based, spreadsheet-style, minimal clicks) rather than the earlier
-    add-one-line-at-a-time flow.
+    with Days / OT hours / ND hours as three inputs per row), *Other
+    Income / Adjustments*, and *Deductions* (statutory + loans). Built to
+    match a UI design provided directly by the user (tab-based,
+    spreadsheet-style, minimal clicks). The Days Present sheet has a
+    two-tier grouped header (Days/Hours vs. Amounts), a single **Save
+    Changes** button for the whole sheet (not one per row), live
+    client-side recalculation as you type (amounts and the column-total
+    footer row update instantly, before anything is saved), and inputs
+    accept up to 4 decimal places (e.g. `9.375` days for a partial/late
+    day). Unsaved changes trigger a browser confirmation if you try to
+    leave the page or navigate back without saving.
 - **Tenant isolation**: every non-super-admin request is scoped to the
   user's own `company_id` server-side (`getScopedCompanyId` /
   `assertCompanyScope` in `middleware/auth.js`), regardless of what a
