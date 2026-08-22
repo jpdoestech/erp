@@ -7,9 +7,14 @@
     <h4 class="mb-0"><%= period.name %> <span class="badge-pill <%= cls %>"><%= period.status.replace('_',' ') %></span></h4>
   </div>
   <% if (entries.length > 0) { %>
-    <a href="/payroll/<%= period.id %>/payslips.pdf" target="_blank" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-file-earmark-pdf"></i> Download All Payslips (PDF)
-    </a>
+    <div class="d-flex gap-2">
+      <a href="/payroll/<%= period.id %>/register" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-table"></i> Payroll Register
+      </a>
+      <a href="/payroll/<%= period.id %>/payslips.pdf" target="_blank" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-file-earmark-pdf"></i> Download All Payslips (PDF)
+      </a>
+    </div>
   <% } %>
 </div>
 <p class="text-muted small mt-n2 mb-3">

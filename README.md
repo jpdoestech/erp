@@ -165,6 +165,21 @@ Demo accounts (from `npm run seed` / `setup.bat`):
   than "₱1,234.56" in the PDF specifically — pdfkit's built-in fonts don't
   include the peso sign glyph, and a blank/missing character is worse than
   a clear "PHP" prefix; the on-screen HTML pages still show ₱ normally.
+- **Reports & exports** (`/reports`, and `/payroll/:id/register`):
+  - **Payroll Register** per period — every employee's full breakdown
+    (Regular, Premium, Additions, Gross, SSS, PhilHealth, Pag-IBIG,
+    Withholding Tax, Loan, Total Deductions, Net) in one table, exportable
+    as CSV (plain decimal numbers, spreadsheet-ready — no currency symbol
+    or thousands separators to fight with on import) or as a landscape
+    PDF (`utils/register-pdf.js`, paginates automatically for long lists).
+  - **Payroll Summary** (`/reports`) — every period for a company, one row
+    each, with the same column set aggregated across all employees, plus a
+    CSV export. Lets you see totals trend across periods at a glance.
+  - Verified end-to-end: the CSV, the PDF (via extracted PDF text), and
+    the on-screen HTML all produce identical figures for the same period,
+    and every figure was hand-checked against the underlying entries.
+    Confirmed 403s on all three register formats (HTML/CSV/PDF) when a
+    company admin tries another company's period by URL.
 - **Money**: all amounts stored/computed as integer centavos, never floats.
 - **Audit trail**: logins/logouts and every create/update/transfer/workflow
   transition are written to `audit_log`.
@@ -175,9 +190,8 @@ Demo accounts (from `npm run seed` / `setup.bat`):
 
 - 13th month pay, leave (SL/VL), de minimis benefits, and year-end tax
   annualization — Regular pay, day-type-aware premium pay, statutory
-  deductions, loans/advances, free-form additions, and payslips are now
-  covered.
-- **Payroll reports/exports** (register, summaries across periods) — next up.
+  deductions, loans/advances, free-form additions, payslips, and payroll
+  reports/exports are now covered.
 - **Payroll Studio** / configurable formula engine — Phase 1 uses one fixed
   (but isolated, in `utils/payroll-calc.js`) basic-pay formula so the rest
   of the pipeline (period lifecycle, locking, audit, segregation of duties)

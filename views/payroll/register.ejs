@@ -1,0 +1,70 @@
+<%- include('../partials/header', { title: 'Payroll Register' }) %>
+
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Payroll · <%= period.name %></span>
+    <h4 class="mb-0">Payroll Register</h4>
+    <p class="text-muted small mb-0 mt-1"><%= period.period_start %> – <%= period.period_end %> · <%= period.pay_frequency.replace('_',' ') %> · <%= period.status.replace('_',' ') %></p>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary btn-sm" href="/payroll/<%= period.id %>/register.csv"><i class="bi bi-filetype-csv"></i> Export CSV</a>
+    <a class="btn btn-outline-primary btn-sm" href="/payroll/<%= period.id %>/register.pdf" target="_blank"><i class="bi bi-file-earmark-pdf"></i> Export PDF</a>
+  </div>
+</div>
+
+<div class="card table-responsive">
+  <table class="table table-hover mb-0" style="min-width:1100px;">
+    <thead>
+      <tr>
+        <th class="ps-3">Emp. No.</th><th>Name</th>
+        <th class="text-end">Regular</th><th class="text-end">Premium</th><th class="text-end">Additions</th><th class="text-end">Gross</th>
+        <th class="text-end">SSS</th><th class="text-end">PhilHealth</th><th class="text-end">Pag-IBIG</th><th class="text-end">W/Tax</th><th class="text-end">Loan</th>
+        <th class="text-end">Total Ded.</th><th class="text-end pe-3">Net Pay</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% rows.forEach(function(r) { %>
+        <tr>
+          <td class="ps-3 money text-muted"><%= r.employee_no %></td>
+          <td class="fw-medium"><%= r.name %></td>
+          <td class="text-end money"><%= (r.regular/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (r.premium/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (r.additions/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (r.gross/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (r.sss/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (r.philhealth/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (r.pagibig/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (r.wtax/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (r.loan/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money text-danger"><%= (r.deductions/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money pe-3 fw-medium"><%= (r.net/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+    <% if (rows.length > 0) { %>
+      <tfoot>
+        <tr class="totals-row">
+          <td colspan="2" class="ps-3">Total</td>
+          <td class="text-end money"><%= (totals.regular/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (totals.premium/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (totals.additions/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (totals.gross/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (totals.sss/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (totals.philhealth/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (totals.pagibig/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (totals.wtax/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (totals.loan/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money"><%= (totals.deductions/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+          <td class="text-end money pe-3"><%= (totals.net/100).toLocaleString('en-PH',{minimumFractionDigits:2}) %></td>
+        </tr>
+      </tfoot>
+    <% } %>
+  </table>
+  <% if (rows.length === 0) { %>
+    <div class="empty-state"><i class="bi bi-people"></i>No employees in this period.</div>
+  <% } %>
+</div>
+
+<div class="mt-3"><a href="/payroll/<%= period.id %>"><i class="bi bi-arrow-left"></i> Back to <%= period.name %></a></div>
+
+<%- include('../partials/footer') %>

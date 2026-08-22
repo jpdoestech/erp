@@ -8,6 +8,8 @@ const { computeStatutoryDeductions } = require('../utils/gov-deductions');
 const { LOAN_TYPES } = require('../utils/loan-types');
 const { pesosToCents } = require('../utils/money');
 const { generateSinglePayslipPdf, generatePeriodPayslipsPdf } = require('../utils/payslip-pdf');
+const { generateRegisterPdf } = require('../utils/register-pdf');
+const { toCsv, centsToDecimal } = require('../utils/csv');
 
 router.use(requireLogin);
 
@@ -745,6 +747,113 @@ router.post(
     res.redirect(`/payroll/${period.id}/entries/${entry.id}`);
   }
 );
+
+// ---- Payroll Register: builds one row per employee with the full breakdown ----
+function buildRegisterRows(period) {
+  const entries = db
+    .prepare(
+      `SELECT pe.*, e.employee_no, e.first_name, e.last_name
+       FROM payroll_entries pe
+       JOIN employees e ON e.id = pe.employee_id
+       WHERE pe.payroll_period_id = ?
+       ORDER BY e.last_name, e.first_name`
+    )
+    .all(period.id);
+
+  const rows = entries.map((e) => ({
+    employee_no: e.employee_no,
+    name: `${e.last_name}, ${e.first_name}`,
+    regular: e.basic_pay_cents,
+    premium: e.premium_pay_cents,
+    additions: e.adjustments_cents,
+    gross: e.gross_pay_cents,
+    sss: e.sss_employee_cents,
+    philhealth: e.philhealth_employee_cents,
+    pagibig: e.pagibig_employee_cents,
+    wtax: e.withholding_tax_cents,
+    loan: e.loan_deduction_cents,
+    deductions: e.total_deductions_cents,
+    net: e.net_pay_cents,
+  }));
+
+  const totals = rows.reduce(
+    (acc, r) => {
+      ['regular', 'premium', 'additions', 'gross', 'sss', 'philhealth', 'pagibig', 'wtax', 'loan', 'deductions', 'net'].forEach(
+        (k) => (acc[k] = (acc[k] || 0) + r[k])
+      );
+      return acc;
+    },
+    {}
+  );
+
+  return { rows, totals };
+}
+
+// ---- Payroll Register: on-screen view ----
+router.get('/:id/register', (req, res) => {
+  const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
+  if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
+  if (!assertCompanyScope(req, period.company_id)) {
+    return res.status(403).render('error', { message: 'You do not have access to this payroll period.' });
+  }
+  const { rows, totals } = buildRegisterRows(period);
+  res.render('payroll/register', { period, rows, totals });
+});
+
+// ---- Payroll Register: CSV export ----
+router.get('/:id/register.csv', (req, res) => {
+  const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
+  if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
+  if (!assertCompanyScope(req, period.company_id)) {
+    return res.status(403).render('error', { message: 'You do not have access to this payroll period.' });
+  }
+  const { rows, totals } = buildRegisterRows(period);
+
+  const header = [
+    'Employee No.', 'Name', 'Regular', 'Premium', 'Additions', 'Gross',
+    'SSS', 'PhilHealth', 'Pag-IBIG', 'Withholding Tax', 'Loan', 'Total Deductions', 'Net Pay',
+  ];
+  const dataRows = rows.map((r) => [
+    r.employee_no, r.name,
+    centsToDecimal(r.regular), centsToDecimal(r.premium), centsToDecimal(r.additions), centsToDecimal(r.gross),
+    centsToDecimal(r.sss), centsToDecimal(r.philhealth), centsToDecimal(r.pagibig), centsToDecimal(r.wtax),
+    centsToDecimal(r.loan), centsToDecimal(r.deductions), centsToDecimal(r.net),
+  ]);
+  const totalRow = [
+    '', 'TOTAL',
+    centsToDecimal(totals.regular), centsToDecimal(totals.premium), centsToDecimal(totals.additions), centsToDecimal(totals.gross),
+    centsToDecimal(totals.sss), centsToDecimal(totals.philhealth), centsToDecimal(totals.pagibig), centsToDecimal(totals.wtax),
+    centsToDecimal(totals.loan), centsToDecimal(totals.deductions), centsToDecimal(totals.net),
+  ];
+
+  const csv = toCsv([header, ...dataRows, totalRow]);
+  const filename = `register-${period.name.replace(/[^a-z0-9]+/gi, '-')}.csv`;
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(csv);
+});
+
+// ---- Payroll Register: PDF export ----
+router.get('/:id/register.pdf', async (req, res) => {
+  const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
+  if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
+  if (!assertCompanyScope(req, period.company_id)) {
+    return res.status(403).render('error', { message: 'You do not have access to this payroll period.' });
+  }
+  const company = db.prepare('SELECT * FROM companies WHERE id = ?').get(period.company_id);
+  const { rows, totals } = buildRegisterRows(period);
+
+  try {
+    const pdfBuffer = await generateRegisterPdf({ company, period, rows, totals });
+    const filename = `register-${period.name.replace(/[^a-z0-9]+/gi, '-')}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).render('error', { message: 'Could not generate the register PDF. Please try again.' });
+  }
+});
 
 // ---- Workflow transitions ----
 // DRAFT -> FOR_REVIEW  (maker submits; records who submitted, for segregation-of-duties below)
