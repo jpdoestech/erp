@@ -205,22 +205,29 @@ Demo accounts (from `npm run seed` / `setup.bat`):
   transition are written to `audit_log`.
 - **Error handling**: a generic error page — no stack traces, SQL, or
   internals are ever sent to the browser.
+- **Employee masterlist details**: Hire Date, Department, and Position are
+  now tracked (all optional, so existing employees created before this
+  don't need backfilling). Editable from the employee's "Edit Details"
+  page, shown on the employee list/detail pages, on the payroll entry
+  header, and on the payslip PDF. Rate and branch/client deployment are
+  still edited elsewhere on purpose — rate changes and transfers have
+  their own history-preserving flows, and folding them into a general edit
+  form would bypass that.
 
 ## Deliberately deferred to later phases (per the build spec's own plan)
 
 - 13th month pay, leave (SL/VL), de minimis benefits, and year-end tax
   annualization — Regular pay, day-type-aware premium pay, statutory
   deductions, loans/advances, free-form additions, payslips, payroll
-  reports/exports, and Payroll Studio are now covered.
+  reports/exports, Payroll Studio, and employee hire date/department/
+  position are now covered. This closes out the original phased plan's
+  deferred list in full.
 - Pagination on large lists, and an automated test suite.
 - Reusing the reference repo's actual UI components — this phase matches
   the reference's design system (colors, typography, layout, component
   conventions) using plain server-rendered EJS + Bootstrap 5 rather than
   porting Vue components, since our stack is Express/EJS, not Vue/Vite.
   Visually consistent; not the same component code.
-- Employee records don't yet capture hire date, department, or position —
-  the entry page header shows what's actually tracked (Employee No.,
-  Branch, Client, Rate) rather than fields that don't exist yet.
 
 ## Project layout
 

@@ -5,9 +5,17 @@
     <span class="eyebrow">Workforce</span>
     <h4 class="mb-0"><%= employee.last_name %>, <%= employee.first_name %> <span class="text-muted fw-normal">(<%= employee.employee_no %>)</span></h4>
   </div>
+  <% if (['SUPER_ADMIN','COMPANY_ADMIN'].includes(currentUser.role)) { %>
+    <a class="btn btn-outline-primary btn-sm" href="/employees/<%= employee.id %>/edit"><i class="bi bi-pencil"></i> Edit Details</a>
+  <% } %>
 </div>
 <p class="text-muted small mt-n2 mb-3">
+  <% if (employee.position) { %><%= employee.position %><% } %>
+  <% if (employee.position && employee.department) { %> · <% } %>
+  <% if (employee.department) { %><%= employee.department %><% } %>
+  <% if (employee.position || employee.department) { %> · <% } %>
   <%= employee.rate_type %> · ₱<%= (employee.rate_amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %>
+  <% if (employee.hire_date) { %> · Hired <%= employee.hire_date %><% } %>
   · <span class="badge-pill <%= employee.status === 'ACTIVE' ? 'badge-pill--green' : 'badge-pill--muted' %>"><%= employee.status %></span>
 </p>
 

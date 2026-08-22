@@ -196,6 +196,7 @@ function buildEntryViewData(period, entry, error) {
   const entryWithEmp = db
     .prepare(
       `SELECT pe.*, e.employee_no, e.first_name, e.last_name, e.status AS employee_status,
+              e.hire_date, e.department, e.position,
               b.name AS branch_name, c.name AS client_name
        FROM payroll_entries pe
        JOIN employees e ON e.id = pe.employee_id

@@ -33,6 +33,21 @@
     </div>
 
     <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <label class="form-label">Hire Date (optional)</label>
+        <input type="date" name="hire_date" class="form-control" value="<%= values.hire_date || '' %>" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Department (optional)</label>
+        <input type="text" name="department" class="form-control" value="<%= values.department || '' %>" maxlength="80" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Position (optional)</label>
+        <input type="text" name="position" class="form-control" value="<%= values.position || '' %>" maxlength="80" />
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
       <div class="col-md-6">
         <label class="form-label">Rate Type</label>
         <select name="rate_type" class="form-select" required>

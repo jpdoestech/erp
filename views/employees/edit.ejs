@@ -1,0 +1,56 @@
+<%- include('../partials/header', { title: 'Edit Employee' }) %>
+
+<div class="page-header"><div><span class="eyebrow">Workforce</span><h4 class="mb-0">Edit Employee Details</h4></div></div>
+
+<div class="card p-4" style="max-width:560px;">
+  <% if (error) { %><div class="alert alert-danger py-2 small"><%= error %></div><% } %>
+  <form method="POST" action="/employees/<%= employee.id %>/edit">
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Employee No.</label>
+        <input type="text" name="employee_no" class="form-control" value="<%= values.employee_no || '' %>" required maxlength="30" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">First Name</label>
+        <input type="text" name="first_name" class="form-control" value="<%= values.first_name || '' %>" required maxlength="80" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Last Name</label>
+        <input type="text" name="last_name" class="form-control" value="<%= values.last_name || '' %>" required maxlength="80" />
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <label class="form-label">Hire Date</label>
+        <input type="date" name="hire_date" class="form-control" value="<%= values.hire_date || '' %>" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Department</label>
+        <input type="text" name="department" class="form-control" value="<%= values.department || '' %>" maxlength="80" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Position</label>
+        <input type="text" name="position" class="form-control" value="<%= values.position || '' %>" maxlength="80" />
+      </div>
+    </div>
+
+    <div class="mb-3" style="max-width:220px;">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        <option value="ACTIVE" <%= values.status === 'ACTIVE' ? 'selected' : '' %>>Active</option>
+        <option value="INACTIVE" <%= values.status === 'INACTIVE' ? 'selected' : '' %>>Inactive</option>
+      </select>
+      <div class="hint">Inactive employees are excluded when a new payroll period auto-loads employees.</div>
+    </div>
+
+    <div class="hint mb-3">Rate and branch/client deployment aren't edited here — use Transfer for deployment changes.</div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary btn-sm" type="submit">Save Changes</button>
+      <a class="btn btn-outline-secondary btn-sm" href="/employees/<%= employee.id %>">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<%- include('../partials/footer') %>

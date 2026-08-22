@@ -63,8 +63,11 @@ function drawPayslip(doc, { company, period, entry, lines, adjustments, loanDedu
   doc.font('Helvetica-Bold').fontSize(11).text(`${entry.last_name}, ${entry.first_name}`, x, infoTop, { width: colWidth });
   doc.font('Helvetica').fontSize(9).fillColor('#667080');
   doc.text(`Employee No: ${entry.employee_no}`, x, doc.y, { width: colWidth });
+  if (entry.position) doc.text(`Position: ${entry.position}`, x, doc.y, { width: colWidth });
+  if (entry.department) doc.text(`Department: ${entry.department}`, x, doc.y, { width: colWidth });
   doc.text(`Branch: ${entry.branch_name || '—'}`, x, doc.y, { width: colWidth });
   doc.text(`Client: ${entry.client_name || '—'}`, x, doc.y, { width: colWidth });
+  if (entry.hire_date) doc.text(`Hire Date: ${entry.hire_date}`, x, doc.y, { width: colWidth });
   doc.text(`Rate: ${entry.rate_type} — ${money(entry.rate_amount_cents)}${entry.rate_type === 'DAILY' ? '/day' : '/month'}`, x, doc.y, {
     width: colWidth,
   });
@@ -80,7 +83,7 @@ function drawPayslip(doc, { company, period, entry, lines, adjustments, loanDedu
   doc.text(`Status: ${period.status.replace('_', ' ')}`, rightColX, doc.y, { width: colWidth, align: 'right' });
   doc.fillColor('#212933');
 
-  doc.y = Math.max(doc.y, infoTop + 90);
+  doc.y = Math.max(doc.y, infoTop + 130);
   doc.moveDown(0.4);
 
   // ---- Earnings (left) / Deductions (right), two columns ----

@@ -58,7 +58,8 @@ router.get('/new', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
 router.post('/', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
   const user = req.session.user;
   const companyId = user.role === 'SUPER_ADMIN' ? Number(req.body.company_id) : user.company_id;
-  const { employee_no, first_name, last_name, rate_type, rate_amount, branch_id, client_id } = req.body;
+  const { employee_no, first_name, last_name, hire_date, department, position, rate_type, rate_amount, branch_id, client_id } =
+    req.body;
 
   const branch = branch_id
     ? db.prepare('SELECT * FROM branches WHERE id = ? AND company_id = ?').get(branch_id, companyId)
@@ -98,10 +99,21 @@ router.post('/', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
   try {
     const info = db
       .prepare(
-        `INSERT INTO employees (company_id, employee_no, first_name, last_name, rate_type, rate_amount_cents)
-         VALUES (?, ?, ?, ?, ?, ?)`
+        `INSERT INTO employees
+           (company_id, employee_no, first_name, last_name, hire_date, department, position, rate_type, rate_amount_cents)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(companyId, employee_no.trim(), first_name.trim(), last_name.trim(), rate_type, rateCents);
+      .run(
+        companyId,
+        employee_no.trim(),
+        first_name.trim(),
+        last_name.trim(),
+        hire_date || null,
+        (department || '').trim() || null,
+        (position || '').trim() || null,
+        rate_type,
+        rateCents
+      );
     const employeeId = info.lastInsertRowid;
 
     db.prepare(
@@ -142,6 +154,58 @@ router.get('/:id', (req, res) => {
     .all(employee.id);
 
   res.render('employees/view', { employee, deployments });
+});
+
+// ---- Edit employee master data (name, employee no., hire date, department, position, status) ----
+router.get('/:id/edit', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
+  const employee = db.prepare('SELECT * FROM employees WHERE id = ?').get(req.params.id);
+  if (!employee) return res.status(404).render('error', { message: 'Employee not found.' });
+  if (!assertCompanyScope(req, employee.company_id)) {
+    return res.status(403).render('error', { message: 'You do not have access to this employee.' });
+  }
+  res.render('employees/edit', { employee, error: null, values: employee });
+});
+
+router.post('/:id/edit', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN'), (req, res) => {
+  const user = req.session.user;
+  const employee = db.prepare('SELECT * FROM employees WHERE id = ?').get(req.params.id);
+  if (!employee) return res.status(404).render('error', { message: 'Employee not found.' });
+  if (!assertCompanyScope(req, employee.company_id)) {
+    return res.status(403).render('error', { message: 'You do not have access to this employee.' });
+  }
+
+  const { employee_no, first_name, last_name, hire_date, department, position, status } = req.body;
+
+  const rerender = (error) =>
+    res.status(400).render('employees/edit', { employee, error, values: { ...employee, ...req.body } });
+
+  if (!employee_no || !employee_no.trim() || !first_name || !first_name.trim() || !last_name || !last_name.trim()) {
+    return rerender('Employee no., first name, and last name are required.');
+  }
+  if (!['ACTIVE', 'INACTIVE'].includes(status)) {
+    return rerender('Status must be Active or Inactive.');
+  }
+
+  try {
+    db.prepare(
+      `UPDATE employees
+       SET employee_no = ?, first_name = ?, last_name = ?, hire_date = ?, department = ?, position = ?, status = ?
+       WHERE id = ?`
+    ).run(
+      employee_no.trim(),
+      first_name.trim(),
+      last_name.trim(),
+      hire_date || null,
+      (department || '').trim() || null,
+      (position || '').trim() || null,
+      status,
+      employee.id
+    );
+    logAction(user.id, 'UPDATE', 'employee', employee.id, `Updated employee details for ${first_name} ${last_name}`);
+    res.redirect(`/employees/${employee.id}`);
+  } catch (e) {
+    rerender('Employee number must be unique within the company.');
+  }
 });
 
 // ---- Transfer form ----

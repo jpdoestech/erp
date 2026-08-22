@@ -9,8 +9,11 @@
     </h4>
     <p class="text-muted small mb-0 mt-1">
       <%= entry.employee_no %>
+      <% if (entry.hire_date) { %> | <%= entry.hire_date %><% } %>
       <% if (entry.branch_name) { %> | <%= entry.branch_name %><% } %>
       <% if (entry.client_name) { %> | <%= entry.client_name %><% } %>
+      <% if (entry.department) { %> | <%= entry.department %><% } %>
+      <% if (entry.position) { %> | <%= entry.position %><% } %>
       · <%= entry.rate_type %> rate: ₱<%= (entry.rate_amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %><%= entry.rate_type === 'DAILY' ? '/day' : '/month' %>
       <% if (!canEdit) { %> · <span class="text-danger">Locked — period is <%= period.status.replace('_',' ') %></span><% } %>
     </p>

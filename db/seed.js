@@ -62,8 +62,8 @@ upsertUser('payrollapprover', 'admin123', 'Bautista, Jose (Payroll Approver)', '
 console.log('APPROVER     -> username: payrollapprover / password: admin123 (approves payroll for Demo Manpower Services Inc.)');
 
 const demoEmployees = [
-  { no: 'EMP-0001', first: 'Pedro', last: 'Reyes', rateType: 'DAILY', rateCents: 65000 }, // PHP 650.00/day
-  { no: 'EMP-0002', first: 'Ana', last: 'Garcia', rateType: 'MONTHLY', rateCents: 1800000 }, // PHP 18,000.00/month
+  { no: 'EMP-0001', first: 'Pedro', last: 'Reyes', rateType: 'DAILY', rateCents: 65000, hireDate: '2023-03-15', department: 'Field Operations', position: 'Janitorial Staff' }, // PHP 650.00/day
+  { no: 'EMP-0002', first: 'Ana', last: 'Garcia', rateType: 'MONTHLY', rateCents: 1800000, hireDate: '2021-06-01', department: 'Client Services', position: 'Account Coordinator' }, // PHP 18,000.00/month
 ];
 
 for (const e of demoEmployees) {
@@ -74,10 +74,11 @@ for (const e of demoEmployees) {
   if (!emp) {
     const info = db
       .prepare(
-        `INSERT INTO employees (company_id, employee_no, first_name, last_name, rate_type, rate_amount_cents)
-         VALUES (?, ?, ?, ?, ?, ?)`
+        `INSERT INTO employees
+           (company_id, employee_no, first_name, last_name, hire_date, department, position, rate_type, rate_amount_cents)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(companyId, e.no, e.first, e.last, e.rateType, e.rateCents);
+      .run(companyId, e.no, e.first, e.last, e.hireDate, e.department, e.position, e.rateType, e.rateCents);
     empId = info.lastInsertRowid;
   } else {
     empId = emp.id;

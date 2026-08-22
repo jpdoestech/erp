@@ -27,6 +27,9 @@ const migrations = [
   "ALTER TABLE payroll_entries ADD COLUMN total_deductions_cents INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE payroll_entries ADD COLUMN loan_deduction_cents INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE payroll_entries ADD COLUMN adjustments_cents INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE employees ADD COLUMN hire_date TEXT",
+  "ALTER TABLE employees ADD COLUMN department TEXT",
+  "ALTER TABLE employees ADD COLUMN position TEXT",
 ];
 for (const sql of migrations) {
   try {

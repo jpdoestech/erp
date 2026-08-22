@@ -9,11 +9,11 @@
 
 <%- include('../partials/company-picker', { basePath: '/employees' }) %>
 
-<div class="card">
-  <table class="table table-hover mb-0">
+<div class="card table-responsive">
+  <table class="table table-hover mb-0" style="min-width:950px;">
     <thead>
       <tr>
-        <th class="ps-3">Employee No.</th><th>Name</th><th>Branch</th><th>Client</th>
+        <th class="ps-3">Employee No.</th><th>Name</th><th>Department</th><th>Branch</th><th>Client</th>
         <th>Rate Type</th><th class="text-end">Rate</th><th>Status</th><th class="table-actions pe-3">Actions</th>
       </tr>
     </thead>
@@ -22,6 +22,7 @@
         <tr>
           <td class="ps-3 money text-muted"><%= e.employee_no %></td>
           <td class="fw-medium"><%= e.last_name %>, <%= e.first_name %></td>
+          <td class="text-muted"><%= e.department || '—' %></td>
           <td class="text-muted"><%= e.branch_name || '—' %></td>
           <td class="text-muted"><%= e.client_name || '—' %></td>
           <td class="text-muted"><%= e.rate_type %></td>
