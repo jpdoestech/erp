@@ -99,33 +99,51 @@ function buildPayTypes() {
 
 const PAY_TYPES = buildPayTypes();
 
-function dailyRateCents(rateType, rateAmountCents) {
-  return rateType === 'MONTHLY' ? rateAmountCents / STANDARD_MONTHLY_DIVISOR : rateAmountCents;
+function dailyRateCents(rateType, rateAmountCents, monthlyDivisor) {
+  const divisor = monthlyDivisor || STANDARD_MONTHLY_DIVISOR;
+  return rateType === 'MONTHLY' ? rateAmountCents / divisor : rateAmountCents;
 }
 
-function hourlyRateCents(rateType, rateAmountCents) {
-  return dailyRateCents(rateType, rateAmountCents) / STANDARD_HOURS_PER_DAY;
+function hourlyRateCents(rateType, rateAmountCents, monthlyDivisor, hoursPerDay) {
+  return dailyRateCents(rateType, rateAmountCents, monthlyDivisor) / (hoursPerDay || STANDARD_HOURS_PER_DAY);
 }
 
-// Regular pay for ordinary days worked.
-function computeEntry({ rateType, rateAmountCents, daysPaid }) {
+// Returns the multiplier that actually applies for a pay type: a company's
+// override if one is set, otherwise the standard default from PAY_TYPES.
+// `rates.multipliers` is a plain { payType: multiplier } map -- see
+// routes/payroll.js's getEffectiveRates(), which loads it from
+// company_pay_type_rates (Payroll Studio).
+function effectiveMultiplier(payType, rates) {
+  const override = rates && rates.multipliers ? rates.multipliers[payType] : undefined;
+  return override !== undefined && override !== null ? override : PAY_TYPES[payType].multiplier;
+}
+
+// Regular pay for ordinary days worked. `rates` (optional) is
+// { monthlyDivisor, hoursPerDay, multipliers } from Payroll Studio company
+// settings; omitting it uses the standard defaults, unchanged from before.
+function computeEntry({ rateType, rateAmountCents, daysPaid, rates }) {
   const days = Number(daysPaid) || 0;
-  const basicPayCents = Math.round(dailyRateCents(rateType, rateAmountCents) * days);
+  const monthlyDivisor = rates && rates.monthlyDivisor;
+  const basicPayCents = Math.round(dailyRateCents(rateType, rateAmountCents, monthlyDivisor) * days);
   // grossPayCents/netPayCents here reflect Regular pay only; the route layer
   // adds premium_pay_cents (from payroll_entry_lines) on top before saving.
   return { basicPayCents, grossPayCents: basicPayCents, netPayCents: basicPayCents };
 }
 
-// One premium-pay line item (any key in PAY_TYPES above).
-function computeLineAmount({ payType, quantity, rateType, rateAmountCents }) {
+// One premium-pay line item (any key in PAY_TYPES above). `rates` (optional,
+// same shape as computeEntry) lets a company override the multiplier and/or
+// the monthly-divisor/hours-per-day basis; omitting it uses standard defaults.
+function computeLineAmount({ payType, quantity, rateType, rateAmountCents, rates }) {
   const def = PAY_TYPES[payType];
   if (!def) throw new Error(`Unknown pay type: ${payType}`);
   const qty = Math.max(0, Number(quantity) || 0);
+  const monthlyDivisor = rates && rates.monthlyDivisor;
+  const hoursPerDay = rates && rates.hoursPerDay;
   const rateCents =
     def.basis === 'HOURS'
-      ? hourlyRateCents(rateType, rateAmountCents)
-      : dailyRateCents(rateType, rateAmountCents);
-  return Math.round(rateCents * def.multiplier * qty);
+      ? hourlyRateCents(rateType, rateAmountCents, monthlyDivisor, hoursPerDay)
+      : dailyRateCents(rateType, rateAmountCents, monthlyDivisor);
+  return Math.round(rateCents * effectiveMultiplier(payType, rates) * qty);
 }
 
 // Row order for the "Days Present" spreadsheet: Regular first, then each
@@ -181,6 +199,7 @@ module.exports = {
   computeLineAmount,
   dailyRateCents,
   hourlyRateCents,
+  effectiveMultiplier,
   buildDayRows,
   DAY_ROW_ORDER,
   PAY_TYPES,

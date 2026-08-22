@@ -1,0 +1,106 @@
+<%- include('../partials/header', { title: 'Payroll Studio' }) %>
+
+<div class="page-header">
+  <div>
+    <span class="eyebrow">Payroll</span>
+    <h4 class="mb-0">Payroll Studio</h4>
+    <p class="text-muted small mb-0 mt-1">Company-specific overrides for how Regular pay and premium pay types are computed.</p>
+  </div>
+</div>
+
+<%- include('../partials/company-picker', { basePath: '/studio' }) %>
+
+<% if (saved) { %><div class="alert alert-success py-2 small"><i class="bi bi-check-circle"></i> Settings saved.</div><% } %>
+<% if (error) { %><div class="alert alert-danger py-2 small"><%= error %></div><% } %>
+
+<% if (!selectedCompanyId) { %>
+  <div class="card"><div class="empty-state"><i class="bi bi-sliders"></i>Select a company to view or edit its pay settings.</div></div>
+<% } else { %>
+
+  <div class="alert alert-info py-2 small mb-3">
+    <i class="bi bi-info-circle"></i>
+    Changes here only affect <strong>new</strong> calculations going forward — days/hours entered and saved after
+    you change a rate. Already-saved payroll entries (including everything in Posted periods) keep the figures
+    they were computed with; nothing is retroactively recalculated.
+  </div>
+
+  <form method="POST" action="/studio" id="studio-form">
+    <% if (companies) { %><input type="hidden" name="company_id" value="<%= selectedCompanyId %>" /><% } %>
+
+    <div class="card p-3 mb-3">
+      <div class="eyebrow mb-2">Regular Pay Basis</div>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Monthly Divisor <% if (studio.monthlyDivisorOverridden) { %><span class="badge-pill badge-pill--blue">Custom</span><% } %></label>
+          <input type="number" step="0.01" min="0.01" name="monthly_divisor" class="form-control" value="<%= studio.monthlyDivisor %>" />
+          <div class="hint">Used to derive a daily rate for MONTHLY employees: daily rate = monthly rate ÷ this number. Standard default: <%= 26 %>.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Hours per Day</label>
+          <input type="number" step="0.01" min="0.01" name="hours_per_day" class="form-control" value="<%= studio.hoursPerDay %>" />
+          <div class="hint">Used to derive an hourly rate from the daily rate, for OT/ND. Standard default: <%= 8 %>.</div>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <% if (studio.monthlyDivisorOverridden) { %>
+            <button form="reset-basis-form" class="btn btn-outline-secondary btn-sm" type="submit">Reset to Defaults</button>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <% studio.groups.forEach(function(group) { %>
+      <div class="card mb-3">
+        <div class="p-3 pb-0"><div class="eyebrow"><%= group.name %></div></div>
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr><th class="ps-3">Pay Type</th><th>Basis</th><th class="text-end">Default</th><th class="text-end" style="width:140px;">Current Multiplier</th><th class="pe-3"></th></tr>
+          </thead>
+          <tbody>
+            <% group.rows.forEach(function(r) { %>
+              <tr>
+                <td class="ps-3"><%= r.label %> <% if (r.isOverridden) { %><span class="badge-pill badge-pill--blue">Custom</span><% } %></td>
+                <td class="text-muted"><%= r.basis === 'HOURS' ? 'per hour' : 'per day (full-day pay)' %></td>
+                <td class="text-end text-muted"><%= (r.defaultMultiplier * 100).toFixed(1) %>%</td>
+                <td class="text-end">
+                  <div class="input-group input-group-sm justify-content-end">
+                    <input type="number" step="0.001" min="0" name="multiplier_<%= r.key %>" class="form-control form-control-sm text-end" style="max-width:90px;" value="<%= (r.currentMultiplier * 100).toFixed(3) %>" data-pct />
+                    <span class="input-group-text">%</span>
+                  </div>
+                </td>
+                <td class="pe-3 text-end">
+                  <% if (r.isOverridden) { %>
+                    <button form="reset-<%= r.key %>-form" class="row-action-link row-action-link--danger" type="submit">Reset</button>
+                  <% } %>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% }); %>
+
+    <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-check-lg"></i> Save Settings</button>
+    <a class="btn btn-outline-secondary btn-sm" href="/payroll">Cancel</a>
+  </form>
+
+  <form id="reset-basis-form" method="POST" action="/studio/reset-basis">
+    <% if (companies) { %><input type="hidden" name="company_id" value="<%= selectedCompanyId %>" /><% } %>
+  </form>
+  <% studio.groups.forEach(function(group) { group.rows.forEach(function(r) { %>
+    <form id="reset-<%= r.key %>-form" method="POST" action="/studio/reset/<%= r.key %>">
+      <% if (companies) { %><input type="hidden" name="company_id" value="<%= selectedCompanyId %>" /><% } %>
+    </form>
+  <% }); }); %>
+
+  <script>
+    // The multiplier inputs are entered/displayed as a percentage (e.g. 130
+    // for 130%) but stored server-side as a fraction (1.30). Convert on submit.
+    document.getElementById('studio-form').addEventListener('submit', function () {
+      this.querySelectorAll('input[data-pct]').forEach(function (el) {
+        if (el.value !== '') el.value = (parseFloat(el.value) / 100).toString();
+      });
+    });
+  </script>
+<% } %>
+
+<%- include('../partials/footer') %>

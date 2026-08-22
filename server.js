@@ -34,6 +34,7 @@ app.use('/employees', require('./routes/employees'));
 app.use('/loans', require('./routes/loans'));
 app.use('/payroll', require('./routes/payroll'));
 app.use('/reports', require('./routes/reports'));
+app.use('/studio', require('./routes/studio'));
 
 app.get('/', requireLogin, (req, res) => {
   const user = req.session.user;

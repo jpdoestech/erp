@@ -162,6 +162,28 @@ CREATE TABLE IF NOT EXISTS payroll_entry_adjustments (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Payroll Studio: per-company overrides of the standard pay computation
+-- basis and premium-pay multipliers. Absence of a row (or a NULL column)
+-- means "use the standard default" -- see utils/payroll-calc.js. Changing
+-- these never retroactively changes already-computed entries: amounts are
+-- computed and stored at save time, not recalculated live from current
+-- settings, so past payroll periods stay exactly as they were run.
+CREATE TABLE IF NOT EXISTS company_pay_settings (
+  company_id INTEGER PRIMARY KEY REFERENCES companies(id),
+  monthly_divisor REAL NOT NULL DEFAULT 26,
+  hours_per_day REAL NOT NULL DEFAULT 8,
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS company_pay_type_rates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  company_id INTEGER NOT NULL REFERENCES companies(id),
+  pay_type TEXT NOT NULL,
+  multiplier REAL NOT NULL,
+  updated_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(company_id, pay_type)
+);
+
 CREATE TABLE IF NOT EXISTS audit_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER REFERENCES users(id),

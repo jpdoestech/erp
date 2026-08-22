@@ -181,6 +181,26 @@ Demo accounts (from `npm run seed` / `setup.bat`):
     Confirmed 403s on all three register formats (HTML/CSV/PDF) when a
     company admin tries another company's period by URL.
 - **Money**: all amounts stored/computed as integer centavos, never floats.
+- **Payroll Studio** (`/studio`, Super Admin / Company Admin only): a
+  per-company settings page for the numbers that used to be hard-coded —
+  the Monthly Divisor and Hours-per-Day used to derive daily/hourly rates,
+  and every premium pay type's multiplier (OT, ND, Rest Day, Special/
+  Regular Holiday, and their Rest-Day combos), edited as percentages with a
+  one-click "Reset to Default" per row. A company with no override still
+  gets the standard DOLE defaults automatically. **Changes are
+  forward-only**: amounts are computed and stored the moment days/hours are
+  saved, not recalculated live from current settings, so changing a rate
+  never retroactively alters an already-saved entry — verified explicitly
+  by overriding Rest Day mid-test and confirming an existing entry's
+  figures didn't move while a *new* entry immediately picked up the new
+  rate. The live client-side preview on the Days Present spreadsheet uses
+  each company's actual effective rates (not the hard-coded defaults), so
+  what you see while typing always matches what Save will compute.
+  Government statutory deduction rates (SSS/PhilHealth/Pag-IBIG/BIR) are
+  **not** made configurable here on purpose — those are set by law, not
+  company policy, and making them freely editable would look like an
+  invitation to under/over-report to a government agency rather than a
+  legitimate business customization.
 - **Audit trail**: logins/logouts and every create/update/transfer/workflow
   transition are written to `audit_log`.
 - **Error handling**: a generic error page — no stack traces, SQL, or
@@ -190,12 +210,8 @@ Demo accounts (from `npm run seed` / `setup.bat`):
 
 - 13th month pay, leave (SL/VL), de minimis benefits, and year-end tax
   annualization — Regular pay, day-type-aware premium pay, statutory
-  deductions, loans/advances, free-form additions, payslips, and payroll
-  reports/exports are now covered.
-- **Payroll Studio** / configurable formula engine — Phase 1 uses one fixed
-  (but isolated, in `utils/payroll-calc.js`) basic-pay formula so the rest
-  of the pipeline (period lifecycle, locking, audit, segregation of duties)
-  could be proven first.
+  deductions, loans/advances, free-form additions, payslips, payroll
+  reports/exports, and Payroll Studio are now covered.
 - Pagination on large lists, and an automated test suite.
 - Reusing the reference repo's actual UI components — this phase matches
   the reference's design system (colors, typography, layout, component

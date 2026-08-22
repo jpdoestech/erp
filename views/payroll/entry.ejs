@@ -135,8 +135,8 @@
 
   <script>
     var ROW_DEFS = <%- rowDefsJson %>;
-    var DAILY_RATE_CENTS = <%= entry.rate_type === 'MONTHLY' ? entry.rate_amount_cents / 26 : entry.rate_amount_cents %>;
-    var HOURLY_RATE_CENTS = DAILY_RATE_CENTS / 8;
+    var DAILY_RATE_CENTS = <%= dailyRateCentsForEntry %>;
+    var HOURLY_RATE_CENTS = <%= hourlyRateCentsForEntry %>;
 
     function pesos(cents) {
       return '₱' + (cents / 100).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

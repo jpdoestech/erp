@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../db/database');
 const { requireLogin, requireRole, getScopedCompanyId, assertCompanyScope } = require('../middleware/auth');
 const { logAction } = require('../db/audit');
-const { computeEntry, computeLineAmount, PAY_TYPES, buildDayRows, DAY_ROW_ORDER } = require('../utils/payroll-calc');
+const { computeEntry, computeLineAmount, PAY_TYPES, buildDayRows, DAY_ROW_ORDER, dailyRateCents, hourlyRateCents, effectiveMultiplier } = require('../utils/payroll-calc');
 const { computeStatutoryDeductions } = require('../utils/gov-deductions');
 const { LOAN_TYPES } = require('../utils/loan-types');
 const { pesosToCents } = require('../utils/money');
@@ -12,6 +12,26 @@ const { generateRegisterPdf } = require('../utils/register-pdf');
 const { toCsv, centsToDecimal } = require('../utils/csv');
 
 router.use(requireLogin);
+
+// Payroll Studio: loads a company's effective pay-computation settings,
+// merging any overrides with the standard defaults. A missing settings row
+// or a missing override for a given pay type simply falls back to the
+// default -- see utils/payroll-calc.js's effectiveMultiplier().
+function getEffectiveRates(companyId) {
+  const settings = db.prepare('SELECT * FROM company_pay_settings WHERE company_id = ?').get(companyId);
+  const overrides = db
+    .prepare('SELECT pay_type, multiplier FROM company_pay_type_rates WHERE company_id = ?')
+    .all(companyId);
+  const multipliers = {};
+  overrides.forEach((o) => {
+    multipliers[o.pay_type] = o.multiplier;
+  });
+  return {
+    monthlyDivisor: settings ? settings.monthly_divisor : undefined,
+    hoursPerDay: settings ? settings.hours_per_day : undefined,
+    multipliers,
+  };
+}
 
 // Recomputes an entry's premium_pay_cents, statutory deductions, and gross/net
 // totals. Regular pay (basic_pay_cents) is left untouched -- callers update
@@ -206,6 +226,7 @@ function buildEntryViewData(period, entry, error) {
     )
     .all(entryWithEmp.employee_id);
 
+  const rates = getEffectiveRates(period.company_id);
   const dayRows = buildDayRows(entryWithEmp, lines);
   const dayTotals = dayRows.reduce(
     (acc, r) => {
@@ -222,16 +243,26 @@ function buildEntryViewData(period, entry, error) {
   );
   // Multiplier data the client needs to live-calculate amounts as the user
   // types, without a server round-trip per keystroke -- one Save per page.
+  // Uses this company's effective (possibly Payroll-Studio-overridden)
+  // multipliers, not the raw PAY_TYPES defaults, so the live preview always
+  // matches what Save will actually compute server-side.
   const rowDefs = DAY_ROW_ORDER.map((key) => {
     const otKey = key === 'REGULAR' ? 'OT' : `OT_${key}`;
     const ndKey = key === 'REGULAR' ? 'ND' : `ND_${key}`;
     return {
       key,
-      dayMult: key === 'REGULAR' ? 1 : PAY_TYPES[key].multiplier,
-      otMult: PAY_TYPES[otKey].multiplier,
-      ndMult: PAY_TYPES[ndKey].multiplier,
+      dayMult: key === 'REGULAR' ? 1 : effectiveMultiplier(key, rates),
+      otMult: effectiveMultiplier(otKey, rates),
+      ndMult: effectiveMultiplier(ndKey, rates),
     };
   });
+  const dailyRateCentsForEntry = dailyRateCents(entryWithEmp.rate_type, entryWithEmp.rate_amount_cents, rates.monthlyDivisor);
+  const hourlyRateCentsForEntry = hourlyRateCents(
+    entryWithEmp.rate_type,
+    entryWithEmp.rate_amount_cents,
+    rates.monthlyDivisor,
+    rates.hoursPerDay
+  );
 
   return {
     period,
@@ -241,6 +272,8 @@ function buildEntryViewData(period, entry, error) {
     dayRows,
     dayTotals,
     rowDefsJson: JSON.stringify(rowDefs),
+    dailyRateCentsForEntry,
+    hourlyRateCentsForEntry,
     loanDeductions,
     adjustments,
     availableLoans,
@@ -366,6 +399,7 @@ router.post('/:id/entries/:entryId', requireRole('SUPER_ADMIN', 'COMPANY_ADMIN')
     rateType: entry.rate_type,
     rateAmountCents: entry.rate_amount_cents,
     daysPaid,
+    rates: getEffectiveRates(period.company_id),
   });
 
   db.prepare('UPDATE payroll_entries SET days_paid = ?, basic_pay_cents = ? WHERE id = ?').run(
@@ -405,6 +439,8 @@ router.post('/:id/entries/:entryId/days', requireRole('SUPER_ADMIN', 'COMPANY_AD
     });
   }
 
+  const rates = getEffectiveRates(period.company_id);
+
   const upsertLine = (payType, qty) => {
     db.prepare('DELETE FROM payroll_entry_lines WHERE payroll_entry_id = ? AND pay_type = ?').run(entry.id, payType);
     const q = Math.max(0, Number(qty) || 0);
@@ -414,6 +450,7 @@ router.post('/:id/entries/:entryId/days', requireRole('SUPER_ADMIN', 'COMPANY_AD
         quantity: q,
         rateType: entry.rate_type,
         rateAmountCents: entry.rate_amount_cents,
+        rates,
       });
       db.prepare(
         'INSERT INTO payroll_entry_lines (payroll_entry_id, pay_type, quantity, amount_cents) VALUES (?, ?, ?, ?)'
@@ -435,6 +472,7 @@ router.post('/:id/entries/:entryId/days', requireRole('SUPER_ADMIN', 'COMPANY_AD
           rateType: entry.rate_type,
           rateAmountCents: entry.rate_amount_cents,
           daysPaid: daysQty,
+          rates,
         });
         db.prepare('UPDATE payroll_entries SET days_paid = ?, basic_pay_cents = ? WHERE id = ?').run(
           daysQty,
@@ -497,6 +535,7 @@ router.post('/:id/entries/:entryId/lines', requireRole('SUPER_ADMIN', 'COMPANY_A
     quantity: qty,
     rateType: entry.rate_type,
     rateAmountCents: entry.rate_amount_cents,
+    rates: getEffectiveRates(period.company_id),
   });
 
   db.prepare(
