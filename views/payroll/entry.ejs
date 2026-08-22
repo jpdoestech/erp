@@ -19,15 +19,15 @@
     <div class="eyebrow mb-2">Summary</div>
     <div class="summary-panel__row">
       <span class="summary-panel__label text-success">Additions</span>
-      <span class="figure text-success" id="summary-additions">+₱<%= (entry.adjustments_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></span>
+      <span class="money text-success" id="summary-additions">+₱<%= (entry.adjustments_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></span>
     </div>
     <div class="summary-panel__row">
       <span class="summary-panel__label text-danger">Deductions</span>
-      <span class="figure text-danger">-₱<%= (entry.total_deductions_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></span>
+      <span class="money text-danger">-₱<%= (entry.total_deductions_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></span>
     </div>
     <div class="summary-panel__row summary-panel__row--total">
       <span class="summary-panel__label">Net Pay</span>
-      <span class="figure fw-bold">₱<%= (entry.net_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></span>
+      <span class="money fw-bold">₱<%= (entry.net_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></span>
     </div>
   </div>
 </div>
@@ -94,23 +94,23 @@
                   <input type="number" step="0.0001" min="0" name="<%= r.key %>_nd" value="<%= r.ndQty %>" class="form-control form-control-sm text-end d-inline-block day-input" style="width:85px;" />
                 <% } else { %><%= r.ndQty %><% } %>
               </td>
-              <td class="text-end figure" data-cell="dayPay">₱<%= (r.dayAmount / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-              <td class="text-end figure" data-cell="otPay">₱<%= (r.otAmount / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-              <td class="text-end figure" data-cell="ndPay">₱<%= (r.ndAmount / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-              <td class="text-end figure fw-medium pe-3" data-cell="rowTotal">₱<%= (r.rowTotal / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <td class="text-end money" data-cell="dayPay">₱<%= (r.dayAmount / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <td class="text-end money" data-cell="otPay">₱<%= (r.otAmount / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <td class="text-end money" data-cell="ndPay">₱<%= (r.ndAmount / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <td class="text-end money fw-medium pe-3" data-cell="rowTotal">₱<%= (r.rowTotal / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
             </tr>
           <% }); %>
         </tbody>
         <tfoot>
           <tr class="totals-row">
             <td class="ps-3">Total</td>
-            <td class="text-end figure" data-total="days"><%= dayTotals.days %></td>
-            <td class="text-end figure" data-total="ot"><%= dayTotals.ot %></td>
-            <td class="text-end figure" data-total="nd"><%= dayTotals.nd %></td>
-            <td class="text-end figure" data-total="dayPay">₱<%= (dayTotals.dayPay / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-            <td class="text-end figure" data-total="otPay">₱<%= (dayTotals.otPay / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-            <td class="text-end figure" data-total="ndPay">₱<%= (dayTotals.ndPay / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-            <td class="text-end figure pe-3" data-total="rowTotal">₱<%= (dayTotals.rowTotal / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+            <td class="text-end money" data-total="days"><%= dayTotals.days %></td>
+            <td class="text-end money" data-total="ot"><%= dayTotals.ot %></td>
+            <td class="text-end money" data-total="nd"><%= dayTotals.nd %></td>
+            <td class="text-end money" data-total="dayPay">₱<%= (dayTotals.dayPay / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+            <td class="text-end money" data-total="otPay">₱<%= (dayTotals.otPay / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+            <td class="text-end money" data-total="ndPay">₱<%= (dayTotals.ndPay / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+            <td class="text-end money pe-3" data-total="rowTotal">₱<%= (dayTotals.rowTotal / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
           </tr>
         </tfoot>
       </table>
@@ -238,7 +238,7 @@
           <% adjustments.forEach(function(a) { %>
             <tr>
               <td class="ps-3"><%= a.description %></td>
-              <td class="text-end figure">₱<%= (a.amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <td class="text-end money">₱<%= (a.amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
               <% if (canEdit) { %>
                 <td class="table-actions pe-3">
                   <form method="POST" action="/payroll/<%= period.id %>/entries/<%= entry.id %>/adjustments/<%= a.id %>/delete" class="d-inline">
@@ -285,7 +285,7 @@
                 <a href="/loans/<%= d.loan_id %>"><%= loanTypes[d.loan_type] || d.loan_type %></a>
                 <% if (d.loan_description) { %><span class="text-muted small"> — <%= d.loan_description %></span><% } %>
               </td>
-              <td class="text-end figure">₱<%= (d.amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+              <td class="text-end money">₱<%= (d.amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
               <% if (canEdit) { %>
                 <td class="table-actions pe-3">
                   <form method="POST" action="/payroll/<%= period.id %>/entries/<%= entry.id %>/loan-deductions/<%= d.id %>/delete" class="d-inline">
@@ -340,12 +340,12 @@
       <table class="table mb-0" style="max-width:480px;">
         <thead><tr><th>Deduction</th><th class="text-end">Employee Share</th><th class="text-end">Employer Share</th></tr></thead>
         <tbody>
-          <tr><td>SSS</td><td class="text-end figure">₱<%= (entry.sss_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end figure text-muted">₱<%= (entry.sss_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
-          <tr><td>PhilHealth</td><td class="text-end figure">₱<%= (entry.philhealth_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end figure text-muted">₱<%= (entry.philhealth_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
-          <tr><td>Pag-IBIG</td><td class="text-end figure">₱<%= (entry.pagibig_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end figure text-muted">₱<%= (entry.pagibig_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
-          <tr><td>Withholding Tax</td><td class="text-end figure">₱<%= (entry.withholding_tax_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end text-muted">—</td></tr>
-          <tr><td>Loan / Cash Advance</td><td class="text-end figure">₱<%= (entry.loan_deduction_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end text-muted">—</td></tr>
-          <tr class="totals-row"><td>Total Deductions</td><td class="text-end figure">₱<%= (entry.total_deductions_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td></td></tr>
+          <tr><td>SSS</td><td class="text-end money">₱<%= (entry.sss_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end money text-muted">₱<%= (entry.sss_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
+          <tr><td>PhilHealth</td><td class="text-end money">₱<%= (entry.philhealth_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end money text-muted">₱<%= (entry.philhealth_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
+          <tr><td>Pag-IBIG</td><td class="text-end money">₱<%= (entry.pagibig_employee_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end money text-muted">₱<%= (entry.pagibig_employer_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td></tr>
+          <tr><td>Withholding Tax</td><td class="text-end money">₱<%= (entry.withholding_tax_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end text-muted">—</td></tr>
+          <tr><td>Loan / Cash Advance</td><td class="text-end money">₱<%= (entry.loan_deduction_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td class="text-end text-muted">—</td></tr>
+          <tr class="totals-row"><td>Total Deductions</td><td class="text-end money">₱<%= (entry.total_deductions_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td><td></td></tr>
         </tbody>
       </table>
     </div>
@@ -353,6 +353,11 @@
 
 </div>
 
-<div class="mt-3"><a href="/payroll/<%= period.id %>" class="leave-guard"><i class="bi bi-arrow-left"></i> Back to <%= period.name %></a></div>
+<div class="mt-3 d-flex justify-content-between align-items-center">
+  <a href="/payroll/<%= period.id %>" class="leave-guard"><i class="bi bi-arrow-left"></i> Back to <%= period.name %></a>
+  <a href="/payroll/<%= period.id %>/entries/<%= entry.id %>/payslip.pdf" target="_blank" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-file-earmark-pdf"></i> Download Payslip (PDF)
+  </a>
+</div>
 
 <%- include('../partials/footer') %>

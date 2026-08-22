@@ -77,7 +77,7 @@ a:hover { text-decoration: underline; }
   margin-bottom: 0.15rem;
 }
 
-.figure, .font-mono { font-family: var(--font-body); }
+.money, .font-mono { font-family: var(--font-body); }
 
 /* ==========================================================================
    App shell: light flat sidebar + plain topbar
@@ -205,6 +205,11 @@ a:hover { text-decoration: underline; }
 
 /* Page header row used across list views */
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.6rem; }
+
+/* Payroll entry header pairs a multi-line title block with a taller summary
+   panel -- top-align them instead of the default bottom-align, or the
+   shorter title block gets pushed down to match the panel's bottom edge. */
+.page-header.flex-wrap { align-items: flex-start; }
 
 .empty-state { padding: 2rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
 .empty-state .bi { font-size: 1.4rem; color: var(--border); display: block; margin-bottom: 0.4rem; }

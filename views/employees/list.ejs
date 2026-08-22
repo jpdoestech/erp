@@ -20,12 +20,12 @@
     <tbody>
       <% employees.forEach(function(e) { %>
         <tr>
-          <td class="ps-3 figure text-muted"><%= e.employee_no %></td>
+          <td class="ps-3 money text-muted"><%= e.employee_no %></td>
           <td class="fw-medium"><%= e.last_name %>, <%= e.first_name %></td>
           <td class="text-muted"><%= e.branch_name || '—' %></td>
           <td class="text-muted"><%= e.client_name || '—' %></td>
           <td class="text-muted"><%= e.rate_type %></td>
-          <td class="text-end figure">₱<%= (e.rate_amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money">₱<%= (e.rate_amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
           <td><span class="badge-pill <%= e.status === 'ACTIVE' ? 'badge-pill--green' : 'badge-pill--muted' %>"><%= e.status %></span></td>
           <td class="table-actions pe-3">
             <span class="row-action-links"><a class="row-action-link" href="/employees/<%= e.id %>">View</a></span>

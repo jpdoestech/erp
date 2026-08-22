@@ -7,6 +7,7 @@ const { computeEntry, computeLineAmount, PAY_TYPES, buildDayRows, DAY_ROW_ORDER 
 const { computeStatutoryDeductions } = require('../utils/gov-deductions');
 const { LOAN_TYPES } = require('../utils/loan-types');
 const { pesosToCents } = require('../utils/money');
+const { generateSinglePayslipPdf, generatePeriodPayslipsPdf } = require('../utils/payslip-pdf');
 
 router.use(requireLogin);
 
@@ -260,6 +261,83 @@ router.get('/:id/entries/:entryId', (req, res) => {
   if (!entry) return res.status(404).render('error', { message: 'Payroll entry not found.' });
 
   res.render('payroll/entry', buildEntryViewData(period, entry, null));
+});
+
+// ---- Single-employee payslip PDF ----
+router.get('/:id/entries/:entryId/payslip.pdf', async (req, res) => {
+  const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
+  if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
+  if (!assertCompanyScope(req, period.company_id)) {
+    return res.status(403).render('error', { message: 'You do not have access to this payroll period.' });
+  }
+  const entry = db
+    .prepare('SELECT * FROM payroll_entries WHERE id = ? AND payroll_period_id = ?')
+    .get(req.params.entryId, period.id);
+  if (!entry) return res.status(404).render('error', { message: 'Payroll entry not found.' });
+  const company = db.prepare('SELECT * FROM companies WHERE id = ?').get(period.company_id);
+
+  const viewData = buildEntryViewData(period, entry, null);
+  try {
+    const pdfBuffer = await generateSinglePayslipPdf({
+      company,
+      period,
+      entry: viewData.entry,
+      lines: viewData.lines,
+      adjustments: viewData.adjustments,
+      loanDeductions: viewData.loanDeductions,
+    });
+    const filename = `payslip-${viewData.entry.employee_no}-${period.period_start}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).render('error', { message: 'Could not generate the payslip PDF. Please try again.' });
+  }
+});
+
+// ---- All-employees payslips PDF for a period (one PDF, one page per employee) ----
+router.get('/:id/payslips.pdf', async (req, res) => {
+  const period = db.prepare('SELECT * FROM payroll_periods WHERE id = ?').get(req.params.id);
+  if (!period) return res.status(404).render('error', { message: 'Payroll period not found.' });
+  if (!assertCompanyScope(req, period.company_id)) {
+    return res.status(403).render('error', { message: 'You do not have access to this payroll period.' });
+  }
+  const company = db.prepare('SELECT * FROM companies WHERE id = ?').get(period.company_id);
+  const entryRows = db
+    .prepare(
+      `SELECT pe.id FROM payroll_entries pe
+       JOIN employees e ON e.id = pe.employee_id
+       WHERE pe.payroll_period_id = ?
+       ORDER BY e.last_name, e.first_name`
+    )
+    .all(period.id);
+
+  if (entryRows.length === 0) {
+    return res.status(404).render('error', { message: 'This period has no employee entries to generate payslips for.' });
+  }
+
+  const entries = entryRows.map((row) => {
+    const entry = db.prepare('SELECT * FROM payroll_entries WHERE id = ?').get(row.id);
+    const viewData = buildEntryViewData(period, entry, null);
+    return {
+      entry: viewData.entry,
+      lines: viewData.lines,
+      adjustments: viewData.adjustments,
+      loanDeductions: viewData.loanDeductions,
+    };
+  });
+
+  try {
+    const pdfBuffer = await generatePeriodPayslipsPdf({ company, period, entries });
+    const filename = `payslips-${period.name.replace(/[^a-z0-9]+/gi, '-')}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).render('error', { message: 'Could not generate the payslips PDF. Please try again.' });
+  }
 });
 
 

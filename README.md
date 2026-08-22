@@ -37,10 +37,16 @@ Demo accounts (from `npm run seed` / `setup.bat`):
 
 - **UI**: restyled to match the `jpdoestech/accounting-system` reference —
   same design tokens (flat/dense manager.io-style, muted blue accent, thin
-  borders instead of shadows), same sidebar-shell layout, same Bootstrap 5 +
-  Bootstrap Icons via CDN, same table/badge/button/form conventions
-  (`page-header` + `eyebrow`, `card` + `table-hover`, `row-action-link`,
-  `badge-pill--*`). No build step needed — plain CDN links, no Vue/Vite.
+  borders instead of shadows), same sidebar-shell layout, same table/badge/
+  button/form conventions (`page-header` + `eyebrow`, `card` + `table-hover`,
+  `row-action-link`, `badge-pill--*`). No build step needed.
+  **Bootstrap 5 and Bootstrap Icons are vendored locally** under
+  `public/vendor/` (not loaded from a CDN) — the app never depends on
+  external network access to render correctly. This was a deliberate fix:
+  a CDN-based setup broke badly (unstyled buttons, all three payroll-entry
+  tabs visibly stacked at once instead of one at a time, no working
+  tab-switching) on any machine where the CDN request is blocked —
+  Brave Shields, a corporate firewall, ad blockers, or just being offline.
 - **Auth**: session-based login, bcrypt password hashing, 8-hour session.
 - **Hierarchy**: Company → Branch → Client, each scoped and created under
   the level above it.
@@ -145,6 +151,20 @@ Demo accounts (from `npm run seed` / `setup.bat`):
   `assertCompanyScope` in `middleware/auth.js`), regardless of what a
   client sends in the URL or form body. Verified: tampering with
   `?company_id=` as a non-super-admin has no effect.
+- **Payslips** (`utils/payslip-pdf.js`): a real PDF, generated server-side
+  with `pdfkit` (pure JS, no native binary or headless-browser dependency —
+  installs cleanly everywhere). "Download Payslip (PDF)" on an individual
+  entry; "Download All Payslips (PDF)" on a period generates one PDF with
+  one page per employee, sorted the same way as the period's table. Each
+  payslip shows the earnings breakdown (Regular + every premium pay line +
+  additions), the deductions breakdown (SSS/PhilHealth/Pag-IBIG/withholding
+  tax/loan), and Net Pay. Verified end-to-end: extracted the actual PDF
+  text (not just "a file was produced") and confirmed every figure matches
+  by hand, and confirmed a company admin gets a 403 trying to fetch another
+  company's payslip PDF by URL. Money is written as "PHP 1,234.56" rather
+  than "₱1,234.56" in the PDF specifically — pdfkit's built-in fonts don't
+  include the peso sign glyph, and a blank/missing character is worse than
+  a clear "PHP" prefix; the on-screen HTML pages still show ₱ normally.
 - **Money**: all amounts stored/computed as integer centavos, never floats.
 - **Audit trail**: logins/logouts and every create/update/transfer/workflow
   transition are written to `audit_log`.
@@ -155,9 +175,9 @@ Demo accounts (from `npm run seed` / `setup.bat`):
 
 - 13th month pay, leave (SL/VL), de minimis benefits, and year-end tax
   annualization — Regular pay, day-type-aware premium pay, statutory
-  deductions, loans/advances, and free-form additions are now covered.
-- **Payslip generation** (printable/PDF per employee) and **payroll
-  reports/exports** (register, summaries) — next up.
+  deductions, loans/advances, free-form additions, and payslips are now
+  covered.
+- **Payroll reports/exports** (register, summaries across periods) — next up.
 - **Payroll Studio** / configurable formula engine — Phase 1 uses one fixed
   (but isolated, in `utils/payroll-calc.js`) basic-pay formula so the rest
   of the pipeline (period lifecycle, locking, audit, segregation of duties)

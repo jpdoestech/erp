@@ -25,9 +25,9 @@
           <td class="ps-3 fw-medium"><%= l.last_name %>, <%= l.first_name %> <span class="text-muted small">(<%= l.employee_no %>)</span></td>
           <td class="text-muted"><%= loanTypes[l.loan_type] || l.loan_type %></td>
           <td class="text-muted"><%= l.description || '—' %></td>
-          <td class="text-end figure">₱<%= (l.principal_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-          <td class="text-end figure fw-medium">₱<%= (l.balance_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-          <td class="text-end figure">₱<%= (l.installment_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money">₱<%= (l.principal_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money fw-medium">₱<%= (l.balance_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money">₱<%= (l.installment_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
           <td><span class="badge-pill <%= cls %>"><%= l.status %></span></td>
           <td class="table-actions pe-3">
             <span class="row-action-links"><a class="row-action-link" href="/loans/<%= l.id %>">View</a></span>

@@ -43,7 +43,7 @@
           <td class="ps-3 fw-medium"><%= d.period_name %></td>
           <td class="text-muted"><%= d.period_start %> – <%= d.period_end %></td>
           <td class="text-muted"><%= d.period_status.replace('_',' ') %></td>
-          <td class="text-end figure pe-3">₱<%= (d.amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money pe-3">₱<%= (d.amount_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
         </tr>
       <% }); %>
     </tbody>

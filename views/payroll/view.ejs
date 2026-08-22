@@ -6,6 +6,11 @@
     <span class="eyebrow">Payroll</span>
     <h4 class="mb-0"><%= period.name %> <span class="badge-pill <%= cls %>"><%= period.status.replace('_',' ') %></span></h4>
   </div>
+  <% if (entries.length > 0) { %>
+    <a href="/payroll/<%= period.id %>/payslips.pdf" target="_blank" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-file-earmark-pdf"></i> Download All Payslips (PDF)
+    </a>
+  <% } %>
 </div>
 <p class="text-muted small mt-n2 mb-3">
   Coverage: <%= period.period_start %> – <%= period.period_end %>
@@ -34,17 +39,18 @@
     <tbody>
       <% entries.forEach(function(e) { %>
         <tr>
-          <td class="ps-3 figure text-muted"><%= e.employee_no %></td>
+          <td class="ps-3 money text-muted"><%= e.employee_no %></td>
           <td class="fw-medium"><%= e.last_name %>, <%= e.first_name %></td>
           <td class="text-muted"><%= e.rate_type %></td>
-          <td class="text-end figure">₱<%= (e.basic_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-          <td class="text-end figure">₱<%= (e.premium_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-          <td class="text-end figure">₱<%= (e.gross_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-          <td class="text-end figure text-danger">-₱<%= (e.total_deductions_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-          <td class="text-end figure fw-medium">₱<%= (e.net_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money">₱<%= (e.basic_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money">₱<%= (e.premium_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money">₱<%= (e.gross_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money text-danger">-₱<%= (e.total_deductions_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money fw-medium">₱<%= (e.net_pay_cents / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
           <td class="table-actions pe-3">
             <span class="row-action-links">
               <a class="row-action-link" href="/payroll/<%= period.id %>/entries/<%= e.id %>"><%= canEdit ? 'Manage' : 'View' %></a>
+              <a class="row-action-link" href="/payroll/<%= period.id %>/entries/<%= e.id %>/payslip.pdf" target="_blank">Payslip</a>
             </span>
           </td>
         </tr>
@@ -54,11 +60,11 @@
       <tfoot>
         <tr class="totals-row">
           <td colspan="3" class="ps-3">Totals</td>
-          <td class="text-end figure">₱<%= (totals.regular / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-          <td class="text-end figure">₱<%= (totals.premium / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-          <td class="text-end figure">₱<%= (totals.gross / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-          <td class="text-end figure text-danger">-₱<%= (totals.deductions / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
-          <td class="text-end figure" colspan="2">₱<%= (totals.net / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money">₱<%= (totals.regular / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money">₱<%= (totals.premium / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money">₱<%= (totals.gross / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money text-danger">-₱<%= (totals.deductions / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
+          <td class="text-end money" colspan="2">₱<%= (totals.net / 100).toLocaleString('en-PH', {minimumFractionDigits:2}) %></td>
         </tr>
       </tfoot>
     <% } %>
